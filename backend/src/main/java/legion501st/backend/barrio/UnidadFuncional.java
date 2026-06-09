@@ -1,4 +1,4 @@
-package legion501st.backend;
+package legion501st.backend.barrio;
 
 public class UnidadFuncional {
     
