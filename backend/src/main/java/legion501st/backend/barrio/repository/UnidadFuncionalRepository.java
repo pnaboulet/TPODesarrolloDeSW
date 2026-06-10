@@ -5,7 +5,9 @@ import org.springframework.stereotype.Repository;
 
 import legion501st.backend.barrio.UnidadFuncional;
 
+import java.util.List;
+
 @Repository
 public interface UnidadFuncionalRepository extends JpaRepository<UnidadFuncional, Long> {
-    
+    List<UnidadFuncional> findByBarrioId(Long barrioId);
 }
