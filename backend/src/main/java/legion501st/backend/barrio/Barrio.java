@@ -10,7 +10,7 @@ public class Barrio {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
     @NotBlank(message = "El nombre del barrio no puede estar vacío")
     @Size(max = 100, message = "El nombre del barrio no puede superar los 100 caracteres")
@@ -29,11 +29,11 @@ public class Barrio {
         this.direccion = direccion;
     }
 
-    public Integer getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
