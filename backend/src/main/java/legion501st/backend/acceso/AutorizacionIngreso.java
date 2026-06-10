@@ -1,39 +1,65 @@
 package legion501st.backend.acceso;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import legion501st.backend.personas.Residente;
 import legion501st.backend.personas.Visitante;
 
 import java.time.LocalDateTime;
 
+@Entity
+@Table(name = "autorizaciones_ingreso")
 public class AutorizacionIngreso {
 
-    private int id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    // Residente que autoriza la entrada. En la tabla se guarda como residente_id
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "residente_id")
     private Residente residenteAutoriza;
+
+    // Visitante autorizado. En la tabla se guarda como visitante_id
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "visitante_id")
     private Visitante visitante;
+
+    @Column(name = "fecha_desde", nullable = false)
     private LocalDateTime fechaDesde;
+
+    @Column(name = "fecha_hasta", nullable = false)
     private LocalDateTime fechaHasta;
-    private boolean utilizada;
+
+    // para que una misma autorización no se use varias veces
+    @Column(name = "utilizada")
+    private boolean utilizada = false;
 
     public AutorizacionIngreso() {
-        this.utilizada = false;
     }
 
-    public AutorizacionIngreso(int id, Residente residenteAutoriza, Visitante visitante,
+    public AutorizacionIngreso(Residente residenteAutoriza, Visitante visitante,
                                LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
-        this.id = id;
         this.residenteAutoriza = residenteAutoriza;
         this.visitante = visitante;
         this.fechaDesde = fechaDesde;
         this.fechaHasta = fechaHasta;
-        this.utilizada = false;
     }
 
-    // Revisa si la autorización todavía sirve para que el visitante pueda entrar
     public boolean estaVigente() {
         LocalDateTime ahora = LocalDateTime.now();
-        return fechaDesde != null
+
+        // esta vigente si no se usó y la fecha actual cae dentro del rango permitido
+        return !utilizada
+                && fechaDesde != null
                 && fechaHasta != null
-                && !utilizada
                 && !ahora.isBefore(fechaDesde)
                 && !ahora.isAfter(fechaHasta);
     }
@@ -42,11 +68,11 @@ public class AutorizacionIngreso {
         this.utilizada = true;
     }
 
-    public int getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
