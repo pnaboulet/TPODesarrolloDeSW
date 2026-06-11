@@ -1,5 +1,119 @@
 package legion501st.backend.personas.service;
 
+import legion501st.backend.barrio.UnidadFuncional;
+import legion501st.backend.barrio.repository.UnidadFuncionalRepository;
+import legion501st.backend.personas.*;
+import legion501st.backend.personas.dto.PersonalDto;
+import legion501st.backend.personas.dto.ResidenteDto;
+import legion501st.backend.personas.repository.*;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Service
+@Transactional(readOnly = true)
 public class PersonaService {
-    
+
+    private final PersonaRepository personaRepository;
+    private final ResidenteRepository residenteRepository;
+    private final PersonalSeguridadRepository seguridadRepository;
+    private final PersonalMantenimientoRepository mantenimientoRepository;
+    private final ProveedorRepository proveedorRepository;
+    private final UnidadFuncionalRepository unidadFuncionalRepository;
+    private final PersonaFactory personaFactory;
+
+    public PersonaService(PersonaRepository personaRepository,
+                          ResidenteRepository residenteRepository,
+                          PersonalSeguridadRepository seguridadRepository,
+                          PersonalMantenimientoRepository mantenimientoRepository,
+                          ProveedorRepository proveedorRepository,
+                          UnidadFuncionalRepository unidadFuncionalRepository,
+                          PersonaFactory personaFactory) {
+        this.personaRepository = personaRepository;
+        this.residenteRepository = residenteRepository;
+        this.seguridadRepository = seguridadRepository;
+        this.mantenimientoRepository = mantenimientoRepository;
+        this.proveedorRepository = proveedorRepository;
+        this.unidadFuncionalRepository = unidadFuncionalRepository;
+        this.personaFactory = personaFactory;
+    }
+
+    @Transactional
+    public ResidenteDto registrarResidente(ResidenteDto dto) {
+        UnidadFuncional uf = unidadFuncionalRepository.findById(dto.unidadFuncionalId())
+                .orElseThrow(() -> new IllegalArgumentException("Unidad Funcional no encontrada con ID: " + dto.unidadFuncionalId()));
+
+        Persona persona = personaFactory.crearPersona(TipoPersona.RESIDENTE, dto.nombre(), dto.apellido(), dto.dni(), dto.email(), null);
+        Residente residente = (Residente) persona;
+        residente.setUnidadFuncional(uf);
+
+        residente = residenteRepository.save(residente);
+        return mapToResidenteDto(residente);
+    }
+
+    @Transactional
+    public PersonalDto registrarPersonal(PersonalDto dto) {
+        Map<String, Object> attrs = new HashMap<>();
+        if (dto.tipo() == TipoPersona.PROVEEDOR && dto.tipoServicio() != null) {
+            attrs.put("tipoServicio", dto.tipoServicio());
+        }
+
+        Persona persona = personaFactory.crearPersona(dto.tipo(), dto.nombre(), dto.apellido(), dto.dni(), dto.email(), attrs);
+        persona = personaRepository.save(persona);
+
+        return mapToPersonalDto(persona);
+    }
+
+    public List<ResidenteDto> listarResidentes() {
+        return residenteRepository.findAll().stream()
+                .map(this::mapToResidenteDto)
+                .collect(Collectors.toList());
+    }
+
+    public List<PersonalDto> listarPersonal() {
+        // Obtenemos todas las personas y filtramos aquellas que son personal de seguridad, mantenimiento o proveedores
+        return personaRepository.findAll().stream()
+                .filter(p -> !(p instanceof Residente) && !(p instanceof Visitante))
+                .map(this::mapToPersonalDto)
+                .collect(Collectors.toList());
+    }
+
+    private ResidenteDto mapToResidenteDto(Residente residente) {
+        return new ResidenteDto(
+                residente.getId(),
+                residente.getNombre(),
+                residente.getApellido(),
+                residente.getDni(),
+                residente.getEmail(),
+                residente.getUnidadFuncional().getId()
+        );
+    }
+
+    private PersonalDto mapToPersonalDto(Persona persona) {
+        TipoPersona tipo = switch (persona) {
+            case Residente r -> TipoPersona.RESIDENTE;
+            case Proveedor p -> TipoPersona.PROVEEDOR;
+            case PersonalSeguridad ps -> TipoPersona.SEGURIDAD;
+            case PersonalMantenimiento pm -> TipoPersona.MANTENIMIENTO;
+            case Visitante v -> TipoPersona.VISITANTE;
+            case Administrador a -> TipoPersona.ADMINISTRADOR;
+            default -> throw new IllegalStateException("Subtipo de persona desconocido: " + persona.getClass());
+        };
+
+        String tipoServicio = (persona instanceof Proveedor p) ? p.getTipoServicio() : null;
+
+        return new PersonalDto(
+                persona.getId(),
+                persona.getNombre(),
+                persona.getApellido(),
+                persona.getDni(),
+                persona.getEmail(),
+                tipo,
+                tipoServicio
+        );
+    }
 }
