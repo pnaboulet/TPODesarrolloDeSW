@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barrio Cerrado - Gestión Operativa</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Top Navigation Bar & Simulator Role Switcher -->
+    <header class="top-bar">
+        <div class="logo-section">
+            <h1>Barrio Cerrado</h1>
+        </div>
+        <div class="role-switcher-container">
+            <span class="role-label">Simular Usuario:</span>
+            <select id="role-select" class="role-select">
+                <option value="ADMINISTRADOR" selected>Administrador (Mesa de Control)</option>
+                <option value="RESIDENTE">Residente (Vivienda)</option>
+                <option value="GUARDIA">Guardia de Seguridad (Portería)</option>
+                <option value="PROVEEDOR">Personal de Mantenimiento / Proveedor</option>
+            </select>
+        </div>
+    </header>
+
+    <!-- App Main Workspace -->
+    <main class="app-container">
+        <div class="main-content">
+
+            <!-- ========================================== -->
+            <!-- PANEL ADMINISTRADOR (Developer 1 Scope)    -->
+            <!-- ========================================== -->
+            <section id="panel-admin" class="role-panel active">
+                <div class="glass-panel">
+                    <h2 class="panel-title">🏢 Gestión de Barrio y Unidades</h2>
+                    <form id="form-barrio">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="barrio-nombre">Nombre del Barrio</label>
+                                <input type="text" id="barrio-nombre" class="form-control" placeholder="Ej: Los Paraísos" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="barrio-direccion">Dirección</label>
+                                <input type="text" id="barrio-direccion" class="form-control" placeholder="Ej: Ruta 9, Km 45" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Crear Barrio</button>
+                    </form>
+                    
+                    <hr style="border: 0; border-top: 1px solid var(--panel-border); margin: 2rem 0;">
+
+                    <form id="form-unidad">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="unidad-barrio">Asociar a Barrio</label>
+                                <select id="unidad-barrio" class="form-control" required>
+                                    <option value="" disabled selected>Seleccione un barrio...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="unidad-identificador">Identificador de Unidad</label>
+                                <input type="text" id="unidad-identificador" class="form-control" placeholder="Ej: Lote 14 / Dpto 3B" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="unidad-tipo">Tipo de Unidad</label>
+                                <select id="unidad-tipo" class="form-control" required>
+                                    <option value="CASA">Casa</option>
+                                    <option value="LOTE">Lote vacío</option>
+                                    <option value="DEPARTAMENTO">Departamento</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Registrar Unidad Funcional</button>
+                    </form>
+                </div>
+
+                <div class="glass-panel">
+                    <h2 class="panel-title">👥 Registro de Personas (Factory Pattern)</h2>
+                    <form id="form-persona">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="persona-tipo">Tipo de Persona</label>
+                                <select id="persona-tipo" class="form-control" required>
+                                    <option value="RESIDENTE">Residente</option>
+                                    <option value="SEGURIDAD">Guardia de Seguridad</option>
+                                    <option value="MANTENIMIENTO">Personal de Mantenimiento</option>
+                                    <option value="PROVEEDOR">Proveedor Externo</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="persona-nombre">Nombre</label>
+                                <input type="text" id="persona-nombre" class="form-control" placeholder="Ej: Juan" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="persona-apellido">Apellido</label>
+                                <input type="text" id="persona-apellido" class="form-control" placeholder="Ej: Pérez" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="persona-dni">DNI</label>
+                                <input type="text" id="persona-dni" class="form-control" placeholder="Ej: 35123456" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="persona-email">Email</label>
+                                <input type="email" id="persona-email" class="form-control" placeholder="Ej: juan@email.com" required>
+                            </div>
+                            
+                            <!-- Campo dinámico para Residentes -->
+                            <div class="form-group" id="group-residente-unidad">
+                                <label for="persona-unidad">Unidad Funcional</label>
+                                <select id="persona-unidad" class="form-control">
+                                    <option value="" disabled selected>Seleccione unidad...</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Campo dinámico para Proveedores -->
+                            <div class="form-group" id="group-proveedor-servicio" style="display: none;">
+                                <label for="persona-servicio">Tipo de Servicio</label>
+                                <input type="text" id="persona-servicio" class="form-control" placeholder="Ej: Electricista / Plomero">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Registrar Persona</button>
+                    </form>
+                </div>
+
+                <!-- Lista de Registros -->
+                <div class="glass-panel">
+                    <h2 class="panel-title">📋 Unidades y Personas Registradas</h2>
+                    <div class="form-grid">
+                        <div>
+                            <h3 style="margin-bottom: 0.75rem; font-size: 1rem; color: var(--text-secondary);">Unidades Funcionales</h3>
+                            <div class="table-container">
+                                <table class="custom-table" id="tabla-unidades">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Identificador</th>
+                                            <th>Tipo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Dinámico -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 style="margin-bottom: 0.75rem; font-size: 1rem; color: var(--text-secondary);">Personas (Residentes y Personal)</h3>
+                            <div class="table-container">
+                                <table class="custom-table" id="tabla-personas">
+                                    <thead>
+                                        <tr>
+                                            <th>Nombre</th>
+                                            <th>DNI</th>
+                                            <th>Rol/Tipo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Dinámico -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mesa global de reclamos para el Administrador -->
+                <div class="glass-panel">
+                    <h2 class="panel-title">🛠️ Mesa de Reclamos (Asignación)</h2>
+                    <div class="table-container">
+                        <table class="custom-table" id="tabla-reclamos-admin">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Residente</th>
+                                    <th>Detalle/Descripción</th>
+                                    <th>Prioridad</th>
+                                    <th>Estado</th>
+                                    <th>Responsable</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Dinámico -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- PANEL RESIDENTE (Developer 2 & 3 Scope)   -->
+            <!-- ========================================== -->
+            <section id="panel-residente" class="role-panel">
+                <div class="glass-panel">
+                    <h2 class="panel-title">✍️ Crear Reclamo o Solicitud</h2>
+                    <form id="form-reclamo">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="reclamo-residente">¿Quién reclama? (Residente)</label>
+                                <select id="reclamo-residente" class="form-control" required>
+                                    <option value="" disabled selected>Seleccione un residente...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="reclamo-tipo">Tipo de Reclamo</label>
+                                <select id="reclamo-tipo" class="form-control" required>
+                                    <option value="MANTENIMIENTO">Mantenimiento</option>
+                                    <option value="SEGURIDAD">Seguridad</option>
+                                    <option value="ADMINISTRATIVO">Administrativo</option>
+                                    <option value="OTRO">Otro</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="reclamo-prioridad">Prioridad</label>
+                                <select id="reclamo-prioridad" class="form-control" required>
+                                    <option value="BAJA">Baja</option>
+                                    <option value="MEDIA" selected>Media</option>
+                                    <option value="ALTA">Alta</option>
+                                    <option value="URGENTE">Urgente</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label for="reclamo-descripcion">Descripción del Problema</label>
+                            <textarea id="reclamo-descripcion" class="form-control" rows="3" placeholder="Describa el inconveniente aquí..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Enviar Reclamo</button>
+                    </form>
+                </div>
+
+                <div class="glass-panel">
+                    <h2 class="panel-title">📑 Mis Reclamos y Solicitudes</h2>
+                    <div class="table-container">
+                        <table class="custom-table" id="tabla-reclamos-residente">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Descripción</th>
+                                    <th>Prioridad</th>
+                                    <th>Estado</th>
+                                    <th>Responsable</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Dinámico -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="glass-panel">
+                    <h2 class="panel-title">🔑 Autorizar Ingreso de Visitante</h2>
+                    <form id="form-autorizar">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="aut-residente">Residente Autorizante</label>
+                                <select id="aut-residente" class="form-control" required>
+                                    <option value="" disabled selected>Seleccione un residente...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="aut-visitante">Visitante a Autorizar</label>
+                                <select id="aut-visitante" class="form-control" required>
+                                    <option value="" disabled selected>Seleccione un visitante...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="aut-desde">Fecha/Hora Desde</label>
+                                <input type="datetime-local" id="aut-desde" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="aut-hasta">Fecha/Hora Hasta</label>
+                                <input type="datetime-local" id="aut-hasta" class="form-control" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success">Generar Autorización</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- PANEL GUARDIA / PORTERÍA (Developer 2)     -->
+            <!-- ========================================== -->
+            <section id="panel-guardia" class="role-panel">
+                <div class="glass-panel">
+                    <h2 class="panel-title">🛡️ Portería: Registrar Ingreso de Visitante</h2>
+                    <form id="form-checkin">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="checkin-seguridad">Guardia de Turno</label>
+                                <select id="checkin-seguridad" class="form-control" required>
+                                    <option value="" disabled selected>Seleccione guardia...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="checkin-visitante">Visitante que llega</label>
+                                <select id="checkin-visitante" class="form-control" required>
+                                    <option value="" disabled selected>Seleccione visitante...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Verificar & Registrar Entrada (Strategy)</button>
+                    </form>
+                </div>
+
+                <div class="glass-panel">
+                    <h2 class="panel-title">🚗 Visitas Activas (Personas dentro del Complejo)</h2>
+                    <div class="table-container">
+                        <table class="custom-table" id="tabla-visitas-activas">
+                            <thead>
+                                <tr>
+                                    <th>ID Visita</th>
+                                    <th>Visitante</th>
+                                    <th>Fecha Ingreso</th>
+                                    <th>Registrado Por</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Dinámico -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- PANEL PROVEEDOR / MANTENIMIENTO (Dev 3)   -->
+            <!-- ========================================== -->
+            <section id="panel-proveedor" class="role-panel">
+                <div class="glass-panel">
+                    <h2 class="panel-title">🔧 Tareas Asignadas de Mantenimiento</h2>
+                    <div class="form-group" style="margin-bottom: 1.5rem; max-width: 300px;">
+                        <label for="proveedor-filtro">Seleccionar Operario / Proveedor</label>
+                        <select id="proveedor-filtro" class="form-control">
+                            <option value="" disabled selected>Seleccione operario...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="custom-table" id="tabla-tareas-proveedor">
+                            <thead>
+                                <tr>
+                                    <th>ID Reclamo</th>
+                                    <th>Descripción</th>
+                                    <th>Prioridad</th>
+                                    <th>Estado Actual</th>
+                                    <th>Acciones (State Pattern)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Dinámico -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Live notifications alert observer panel -->
+            <div class="notifications-panel glass-panel">
+                <h3 class="panel-title">🔔 Consola de Notificaciones del Sistema (Observer Pattern)</h3>
+                <div class="console-log" id="notification-console">
+                    <div class="console-entry system">
+                        <span class="console-time">[12:00:00]</span>
+                        <span>Consola iniciada. Escuchando eventos @EventListener de Spring...</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
