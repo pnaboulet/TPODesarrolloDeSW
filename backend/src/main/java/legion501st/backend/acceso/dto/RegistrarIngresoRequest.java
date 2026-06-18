@@ -2,8 +2,8 @@ package legion501st.backend.acceso.dto;
 
 public class RegistrarIngresoRequest {
 
-    // Visitante que se presenta en la entrada del barrio
-    private Long visitanteId;
+    // En portería se busca al visitante por DNI, no por un id que el guardia no conoce
+    private String visitanteDni;
 
     // Guardia que registra el ingreso en portería
     private Long seguridadId;
@@ -11,17 +11,17 @@ public class RegistrarIngresoRequest {
     public RegistrarIngresoRequest() {
     }
 
-    public RegistrarIngresoRequest(Long visitanteId, Long seguridadId) {
-        this.visitanteId = visitanteId;
+    public RegistrarIngresoRequest(String visitanteDni, Long seguridadId) {
+        this.visitanteDni = visitanteDni;
         this.seguridadId = seguridadId;
     }
 
-    public Long getVisitanteId() {
-        return visitanteId;
+    public String getVisitanteDni() {
+        return visitanteDni;
     }
 
-    public void setVisitanteId(Long visitanteId) {
-        this.visitanteId = visitanteId;
+    public void setVisitanteDni(String visitanteDni) {
+        this.visitanteDni = visitanteDni;
     }
 
     public Long getSeguridadId() {

@@ -11,6 +11,7 @@ import legion501st.backend.personas.PersonalSeguridad;
 import legion501st.backend.personas.Residente;
 import legion501st.backend.personas.Visitante;
 import legion501st.backend.personas.repository.PersonaRepository;
+import legion501st.backend.personas.repository.VisitanteRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -22,43 +23,53 @@ public class AccesoService {
     private final AutorizacionIngresoRepository autorizacionRepository;
     private final VisitaRepository visitaRepository;
     private final PersonaRepository personaRepository;
+    private final VisitanteRepository visitanteRepository;
     private final List<ProtocoloAcceso> protocolos;
 
     public AccesoService(AutorizacionIngresoRepository autorizacionRepository,
                          VisitaRepository visitaRepository,
                          PersonaRepository personaRepository,
+                         VisitanteRepository visitanteRepository,
                          List<ProtocoloAcceso> protocolos) {
         this.autorizacionRepository = autorizacionRepository;
         this.visitaRepository = visitaRepository;
         this.personaRepository = personaRepository;
+        this.visitanteRepository = visitanteRepository;
         this.protocolos = protocolos;
     }
 
-    public AutorizacionIngreso crearAutorizacion(Long residenteId, Long visitanteId,
+    public AutorizacionIngreso crearAutorizacion(Long residenteId, String visitanteNombre, String visitanteDni,
                                                   LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
         Persona residente = buscarPersona(residenteId);
-        Persona visitante = buscarPersona(visitanteId);
 
         if (!(residente instanceof Residente)) {
             throw new IllegalArgumentException("La persona que autoriza debe ser un residente");
         }
 
-        if (!(visitante instanceof Visitante)) {
-            throw new IllegalArgumentException("La persona autorizada debe ser un visitante");
-        }
+        validarDatosVisitante(visitanteNombre, visitanteDni);
+        validarRangoFechas(fechaDesde, fechaHasta);
 
-        if (fechaDesde == null || fechaHasta == null || fechaHasta.isBefore(fechaDesde)) {
-            throw new IllegalArgumentException("El rango de fechas de la autorización no es válido");
-        }
+        Visitante visitante = buscarOCrearVisitante(visitanteNombre, visitanteDni);
 
         AutorizacionIngreso autorizacion = new AutorizacionIngreso(
                 (Residente) residente,
-                (Visitante) visitante,
+                visitante,
                 fechaDesde,
                 fechaHasta
         );
 
         return autorizacionRepository.save(autorizacion);
+    }
+
+    public Visita registrarIngresoVisitante(String visitanteDni, Long seguridadId) {
+        if (visitanteDni == null || visitanteDni.isBlank()) {
+            throw new IllegalArgumentException("Debe ingresar el DNI del visitante");
+        }
+
+        Visitante visitante = visitanteRepository.findByDni(visitanteDni.trim())
+                .orElseThrow(() -> new IllegalArgumentException("No existe un visitante con ese DNI"));
+
+        return registrarIngresoVisitante(visitante.getId(), seguridadId);
     }
 
     public Visita registrarIngresoVisitante(Long visitanteId, Long seguridadId) {
@@ -83,7 +94,7 @@ public class AccesoService {
                 )
                 .orElse(null);
 
-        // Acá se aplica Strategy: el service no valida a mano, le pregunta al protocolo correcto
+        // Strategy: el service delega la regla de ingreso al protocolo que corresponda
         ProtocoloAcceso protocolo = buscarProtocolo(visitante);
 
         if (!protocolo.puedeIngresar(visitante, autorizacion)) {
@@ -108,6 +119,43 @@ public class AccesoService {
 
     public List<Visita> listarVisitas() {
         return visitaRepository.findAll();
+    }
+
+    private Visitante buscarOCrearVisitante(String nombre, String dni) {
+        String dniLimpio = dni.trim();
+
+        return visitanteRepository.findByDni(dniLimpio)
+                .orElseGet(() -> {
+                    // La tabla personas exige apellido y email; para visitantes se generan internamente
+                    Visitante nuevoVisitante = new Visitante(
+                            nombre.trim(),
+                            "Visitante",
+                            dniLimpio,
+                            generarEmailVisitante(dniLimpio)
+                    );
+                    return visitanteRepository.save(nuevoVisitante);
+                });
+    }
+
+    private void validarDatosVisitante(String nombre, String dni) {
+        if (nombre == null || nombre.isBlank()) {
+            throw new IllegalArgumentException("Debe ingresar el nombre del visitante");
+        }
+
+        if (dni == null || dni.isBlank()) {
+            throw new IllegalArgumentException("Debe ingresar el DNI del visitante");
+        }
+    }
+
+    private void validarRangoFechas(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
+        if (fechaDesde == null || fechaHasta == null || fechaHasta.isBefore(fechaDesde)) {
+            throw new IllegalArgumentException("El rango de fechas de la autorización no es válido");
+        }
+    }
+
+    private String generarEmailVisitante(String dni) {
+        String dniParaEmail = dni.replaceAll("[^0-9A-Za-z]", "");
+        return "visitante." + dniParaEmail + "@barrio.local";
     }
 
     private Persona buscarPersona(Long personaId) {

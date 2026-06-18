@@ -278,9 +278,8 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const selectRes = document.getElementById("reclamo-residente");
             const selectResAut = document.getElementById("aut-residente");
-            const selectVis = document.getElementById("aut-visitante");
             
-            // Cargar residentes para los combos
+            // El visitante se escribe al autorizar; solo cargamos residentes para los combos
             const resList = await apiRequest("/api/residentes");
             [selectRes, selectResAut].forEach(sel => {
                 sel.innerHTML = '<option value="" disabled selected>Seleccione un residente...</option>';
@@ -290,17 +289,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     opt.textContent = `${r.nombre} ${r.apellido}`;
                     sel.appendChild(opt);
                 });
-            });
-
-            // Cargar personas para sacar los visitantes
-            const persList = await apiRequest("/api/personal");
-            const visitantes = persList.filter(p => p.tipo === "VISITANTE");
-            selectVis.innerHTML = '<option value="" disabled selected>Seleccione un visitante...</option>';
-            visitantes.forEach(v => {
-                const opt = document.createElement("option");
-                opt.value = v.id;
-                opt.textContent = `${v.nombre} ${v.apellido}`;
-                selectVis.appendChild(opt);
             });
         } catch (e) {}
     }
@@ -369,11 +357,9 @@ document.addEventListener("DOMContentLoaded", () => {
     async function cargarDatosGuardia() {
         try {
             const selectGuardia = document.getElementById("checkin-seguridad");
-            const selectVisitante = document.getElementById("checkin-visitante");
             
             const persList = await apiRequest("/api/personal");
             const guardiasList = persList.filter(p => p.tipo === "SEGURIDAD");
-            const visitantesList = persList.filter(p => p.tipo === "VISITANTE");
 
             selectGuardia.innerHTML = '<option value="" disabled selected>Seleccione guardia...</option>';
             guardiasList.forEach(g => {
@@ -381,14 +367,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 opt.value = g.id;
                 opt.textContent = `${g.nombre} ${g.apellido}`;
                 selectGuardia.appendChild(opt);
-            });
-
-            selectVisitante.innerHTML = '<option value="" disabled selected>Seleccione visitante...</option>';
-            visitantesList.forEach(v => {
-                const opt = document.createElement("option");
-                opt.value = v.id;
-                opt.textContent = `${v.nombre} ${v.apellido} (DNI: ${v.dni})`;
-                selectVisitante.appendChild(opt);
             });
         } catch (e) {}
     }
@@ -408,9 +386,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const tr = document.createElement("tr");
             tr.innerHTML = `
                 <td>#${v.id}</td>
-                <td>ID Visitor: ${v.visitanteId}</td>
+                <td>${v.nombreVisitante || "Visitante"} - DNI: ${v.dniVisitante || "s/d"}</td>
                 <td>${new Date(v.fechaIngreso).toLocaleString()}</td>
-                <td>Guardia ID: ${v.registradoPorSeguridadId}</td>
+                <td>Portería</td>
                 <td><button class="btn btn-danger btn-sm btn-checkout" data-vis="${v.visitanteId}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Registrar Salida</button></td>
             `;
             tbody.appendChild(tr);
@@ -522,18 +500,20 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("form-autorizar").addEventListener("submit", async (e) => {
         e.preventDefault();
         const residenteId = document.getElementById("aut-residente").value;
-        const visitanteId = document.getElementById("aut-visitante").value;
+        const visitanteNombre = document.getElementById("aut-visitante-nombre").value.trim();
+        const visitanteDni = document.getElementById("aut-visitante-dni").value.trim();
         const desdeVal = document.getElementById("aut-desde").value;
         const hastaVal = document.getElementById("aut-hasta").value;
 
         try {
             const res = await apiRequest("/api/autorizaciones", "POST", {
                 residenteId: parseInt(residenteId),
-                visitanteId: parseInt(visitanteId),
-                fechaDesde: new Date(desdeVal).toISOString(),
-                fechaHasta: new Date(hastaVal).toISOString()
+                visitanteNombre,
+                visitanteDni,
+                fechaDesde: desdeVal,
+                fechaHasta: hastaVal
             });
-            logSystem(`Autorización #${res.id} creada por residente ID #${residenteId} para visitante ID #${visitanteId}`, "system");
+            logSystem(`Autorización #${res.id} creada para ${visitanteNombre} (DNI: ${visitanteDni})`, "system");
             document.getElementById("form-autorizar").reset();
         } catch (err) {}
     });
@@ -542,14 +522,14 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("form-checkin").addEventListener("submit", async (e) => {
         e.preventDefault();
         const seguridadId = document.getElementById("checkin-seguridad").value;
-        const visitanteId = document.getElementById("checkin-visitante").value;
+        const visitanteDni = document.getElementById("checkin-visitante-dni").value.trim();
 
         try {
             const res = await apiRequest("/api/visitas/ingreso", "POST", {
-                visitanteId: parseInt(visitanteId),
+                visitanteDni,
                 seguridadId: parseInt(seguridadId)
             });
-            logSystem(`Ingreso exitoso de visitante ID #${visitanteId} registrado por guardia ID #${seguridadId} (Visita #${res.id})`, "system");
+            logSystem(`Ingreso exitoso de visitante DNI ${visitanteDni} registrado por guardia ID #${seguridadId} (Visita #${res.id})`, "system");
             logSystem(`[Push Alert] Visitante ingresando a Unidad Funcional`, "push");
             document.getElementById("form-checkin").reset();
             cargarVisitasActivas();

@@ -260,10 +260,12 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="aut-visitante">Visitante a Autorizar</label>
-                                <select id="aut-visitante" class="form-control" required>
-                                    <option value="" disabled selected>Seleccione un visitante...</option>
-                                </select>
+                                <label for="aut-visitante-nombre">Nombre del Visitante</label>
+                                <input type="text" id="aut-visitante-nombre" class="form-control" placeholder="Ej: Juan" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="aut-visitante-dni">DNI del Visitante</label>
+                                <input type="text" id="aut-visitante-dni" class="form-control" placeholder="Ej: 12345678" required>
                             </div>
                             <div class="form-group">
                                 <label for="aut-desde">Fecha/Hora Desde</label>
@@ -294,10 +296,8 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="checkin-visitante">Visitante que llega</label>
-                                <select id="checkin-visitante" class="form-control" required>
-                                    <option value="" disabled selected>Seleccione visitante...</option>
-                                </select>
+                                <label for="checkin-visitante-dni">DNI del Visitante</label>
+                                <input type="text" id="checkin-visitante-dni" class="form-control" placeholder="DNI presentado en portería" required>
                             </div>
                         </div>
                         <button type="submit" class="btn btn-primary">Verificar & Registrar Entrada (Strategy)</button>

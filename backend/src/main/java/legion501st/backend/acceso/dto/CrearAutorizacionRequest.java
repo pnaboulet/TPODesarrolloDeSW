@@ -4,22 +4,25 @@ import java.time.LocalDateTime;
 
 public class CrearAutorizacionRequest {
 
-    // Id del residente que está autorizando al visitante
+    // Residente que está creando la autorización desde su vista
     private Long residenteId;
 
-    // Id del visitante que va a poder ingresar
-    private Long visitanteId;
+    // Datos mínimos del visitante que informa el residente en el momento
+    private String visitanteNombre;
+    private String visitanteDni;
 
-    // Rango de validez de la autorización
+    // Rango en el que el visitante puede presentarse en portería
     private LocalDateTime fechaDesde;
     private LocalDateTime fechaHasta;
 
     public CrearAutorizacionRequest() {
     }
 
-    public CrearAutorizacionRequest(Long residenteId, Long visitanteId, LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
+    public CrearAutorizacionRequest(Long residenteId, String visitanteNombre, String visitanteDni,
+                                    LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
         this.residenteId = residenteId;
-        this.visitanteId = visitanteId;
+        this.visitanteNombre = visitanteNombre;
+        this.visitanteDni = visitanteDni;
         this.fechaDesde = fechaDesde;
         this.fechaHasta = fechaHasta;
     }
@@ -32,12 +35,20 @@ public class CrearAutorizacionRequest {
         this.residenteId = residenteId;
     }
 
-    public Long getVisitanteId() {
-        return visitanteId;
+    public String getVisitanteNombre() {
+        return visitanteNombre;
     }
 
-    public void setVisitanteId(Long visitanteId) {
-        this.visitanteId = visitanteId;
+    public void setVisitanteNombre(String visitanteNombre) {
+        this.visitanteNombre = visitanteNombre;
+    }
+
+    public String getVisitanteDni() {
+        return visitanteDni;
+    }
+
+    public void setVisitanteDni(String visitanteDni) {
+        this.visitanteDni = visitanteDni;
     }
 
     public LocalDateTime getFechaDesde() {

@@ -33,7 +33,8 @@ public class AccesoController {
         // El controller solo recibe datos y delega la lógica al service
         AutorizacionIngreso autorizacion = accesoService.crearAutorizacion(
                 request.getResidenteId(),
-                request.getVisitanteId(),
+                request.getVisitanteNombre(),
+                request.getVisitanteDni(),
                 request.getFechaDesde(),
                 request.getFechaHasta()
         );
@@ -48,7 +49,7 @@ public class AccesoController {
     public ResponseEntity<VisitaResponse> registrarIngreso(@RequestBody RegistrarIngresoRequest request) {
         // Seguridad registra el ingreso y el service valida si el visitante puede entrar
         Visita visita = accesoService.registrarIngresoVisitante(
-                request.getVisitanteId(),
+                request.getVisitanteDni(),
                 request.getSeguridadId()
         );
 
