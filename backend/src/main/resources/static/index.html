@@ -193,15 +193,24 @@
             <!-- ========================================== -->
             <section id="panel-residente" class="role-panel">
                 <div class="glass-panel">
+                    <h2 class="panel-title">🏠 Vista de Residente</h2>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="residente-activo">Operar como residente</label>
+                            <select id="residente-activo" class="form-control" required>
+                                <option value="" disabled selected>Seleccione un residente...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <p class="text-muted" style="margin-top: 0.75rem;">
+                        El residente elegido se usa para crear reclamos, autorizar visitantes y consultar sus solicitudes.
+                    </p>
+                </div>
+
+                <div class="glass-panel">
                     <h2 class="panel-title">✍️ Crear Reclamo o Solicitud</h2>
                     <form id="form-reclamo">
                         <div class="form-grid">
-                            <div class="form-group">
-                                <label for="reclamo-residente">¿Quién reclama? (Residente)</label>
-                                <select id="reclamo-residente" class="form-control" required>
-                                    <option value="" disabled selected>Seleccione un residente...</option>
-                                </select>
-                            </div>
                             <div class="form-group">
                                 <label for="reclamo-tipo">Tipo de Reclamo</label>
                                 <select id="reclamo-tipo" class="form-control" required>
@@ -253,12 +262,6 @@
                     <h2 class="panel-title">🔑 Autorizar Ingreso de Visitante</h2>
                     <form id="form-autorizar">
                         <div class="form-grid">
-                            <div class="form-group">
-                                <label for="aut-residente">Residente Autorizante</label>
-                                <select id="aut-residente" class="form-control" required>
-                                    <option value="" disabled selected>Seleccione un residente...</option>
-                                </select>
-                            </div>
                             <div class="form-group">
                                 <label for="aut-visitante-nombre">Nombre del Visitante</label>
                                 <input type="text" id="aut-visitante-nombre" class="form-control" placeholder="Ej: Juan" required>
