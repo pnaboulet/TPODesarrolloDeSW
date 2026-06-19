@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let reclamos = [];
     let visitasActivas = [];
     let residenteActivoId = null;
+    let responsablesAsignables = [];
 
     // --- DOM ELEMENTS ---
     const roleSelect = document.getElementById("role-select");
@@ -38,6 +39,23 @@ document.addEventListener("DOMContentLoaded", () => {
         entry.appendChild(textSpan);
         consoleLog.appendChild(entry);
         consoleLog.scrollTop = consoleLog.scrollHeight;
+    }
+
+    function mostrarMensaje(message, type = "success") {
+        const container = document.getElementById("toast-container");
+        if (!container) return;
+
+        const toast = document.createElement("div");
+        toast.className = `toast-message ${type}`;
+        toast.textContent = message;
+
+        container.appendChild(toast);
+
+        // El mensaje se va solo para no obligar al usuario a cerrar alertas en cada operación.
+        setTimeout(() => {
+            toast.classList.add("hide");
+            setTimeout(() => toast.remove(), 250);
+        }, 3500);
     }
 
     // --- ROLE SWITCHER LOGIC ---
@@ -76,9 +94,33 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (error) {
             logSystem(`Error API (${url}): ${error.message}`, "system");
             console.error(error);
-            alert(`Error: ${error.message}`);
+            mostrarMensaje(`Error: ${error.message}`, "error");
             throw error;
         }
+    }
+
+
+    function validarRangoAutorizacion(fechaDesde, fechaHasta) {
+        if (!fechaDesde || !fechaHasta) {
+            mostrarMensaje("Complete la fecha desde y la fecha hasta de la autorización.", "warning");
+            return false;
+        }
+
+        const desde = new Date(fechaDesde);
+        const hasta = new Date(fechaHasta);
+
+        if (Number.isNaN(desde.getTime()) || Number.isNaN(hasta.getTime())) {
+            mostrarMensaje("Revise las fechas ingresadas para la autorización.", "warning");
+            return false;
+        }
+
+        // La autorización solo tiene sentido si termina después de comenzar.
+        if (hasta <= desde) {
+            mostrarMensaje("La fecha hasta debe ser posterior a la fecha desde.", "warning");
+            return false;
+        }
+
+        return true;
     }
 
     function obtenerResidenteActivoId() {
@@ -87,10 +129,41 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // El residente se elige una sola vez para que toda esta vista trabaje con la misma persona.
         if (!valor) {
-            alert("Seleccione un residente para operar en esta vista.");
+            mostrarMensaje("Seleccione un residente para operar en esta vista.", "warning");
             return null;
         }
         return parseInt(valor);
+    }
+
+    function obtenerTextoUnidad(unidadId) {
+        if (!unidadId) return "Sin unidad";
+
+        const unidad = unidades.find(u => String(u.id) === String(unidadId));
+        if (!unidad) return `Unidad #${unidadId}`;
+
+        // Usamos los datos que ya vienen de /api/unidades para mostrar la relación residente-unidad sin tocar el backend.
+        return `${unidad.identificador} (${unidad.tipoUnidad})`;
+    }
+
+    function obtenerNombreResponsable(responsableId) {
+        if (!responsableId) return '<span class="text-muted">Sin asignar</span>';
+
+        const persona = personas.find(p => String(p.id) === String(responsableId));
+        if (!persona) return `ID #${responsableId}`;
+
+        return `${persona.nombre} ${persona.apellido} (${persona.tipo})`;
+    }
+
+    function crearOpcionesResponsables() {
+        if (!responsablesAsignables.length) {
+            return '<option value="" disabled selected>No hay responsables cargados</option>';
+        }
+
+        // El option muestra nombre y rol, pero el value sigue siendo el id que necesita el backend.
+        return '<option value="" disabled selected>Seleccione responsable...</option>' +
+            responsablesAsignables.map(p =>
+                `<option value="${p.id}">${p.nombre} ${p.apellido} (${p.tipo})</option>`
+            ).join('');
     }
 
     // --- CARGA DE DATOS ---
@@ -154,6 +227,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const listRes = await apiRequest("/api/residentes");
             const listPers = await apiRequest("/api/personal");
             personas = [...listRes.map(r => ({ ...r, tipo: "RESIDENTE" })), ...listPers];
+            responsablesAsignables = listPers.filter(p => p.tipo === "MANTENIMIENTO" || p.tipo === "PROVEEDOR");
             renderTablaPersonas();
         } catch (e) {
             console.log("Error cargando personas");
@@ -180,10 +254,13 @@ document.addEventListener("DOMContentLoaded", () => {
         tbody.innerHTML = "";
         personas.forEach(p => {
             const tr = document.createElement("tr");
+            const unidadTexto = p.tipo === "RESIDENTE" ? obtenerTextoUnidad(p.unidadFuncionalId) : "-";
+
             tr.innerHTML = `
                 <td>${p.nombre} ${p.apellido}</td>
                 <td>${p.dni}</td>
                 <td><span class="badge ${p.tipo === 'RESIDENTE' ? 'badge-success' : 'badge-process'}">${p.tipo}</span></td>
+                <td>${unidadTexto}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -200,6 +277,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const result = await apiRequest("/api/barrios", "POST", { nombre, direccion });
             logSystem(`Barrio creado: ${result.nombre} (ID: ${result.id})`, "system");
+            mostrarMensaje("Barrio creado correctamente.");
             document.getElementById("form-barrio").reset();
             cargarBarrios();
         } catch (error) {}
@@ -226,6 +304,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     tipoUnidad
                 });
                 logSystem(`Unidad registrada: ${result.identificador} (ID: ${result.id})`, "system");
+                mostrarMensaje("Unidad funcional registrada correctamente.");
                 document.getElementById("form-unidad").reset();
                 cargarUnidades();
             } catch (error) {}
@@ -276,6 +355,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
             }
             logSystem(`Persona registrada via Factory: ${result.nombre} ${result.apellido} (Tipo: ${tipo})`, "system");
+            mostrarMensaje("Persona registrada correctamente.");
             formPersona.reset();
             groupUnidad.style.display = "flex"; // default
             groupServicio.style.display = "none";
@@ -301,7 +381,7 @@ document.addEventListener("DOMContentLoaded", () => {
             resList.forEach(r => {
                 const opt = document.createElement("option");
                 opt.value = r.id;
-                opt.textContent = `${r.nombre} ${r.apellido}`;
+                opt.textContent = `${r.nombre} ${r.apellido} - ${obtenerTextoUnidad(r.unidadFuncionalId)}`;
                 selectActivo.appendChild(opt);
             });
 
@@ -379,29 +459,40 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td><strong>${r.tipoReclamo}</strong><br><small>${r.descripcion}</small></td>
                 <td><span class="badge">${r.prioridad}</span></td>
                 <td><span class="badge ${badgeClass}">${r.estado}</span></td>
-                <td>${r.responsableId ? 'ID #' + r.responsableId : '<span class="text-muted">Sin asignar</span>'}</td>
+                <td>${obtenerNombreResponsable(r.responsableId)}</td>
                 <td>
-                    ${r.estado === 'PENDIENTE' ? `<button class="btn btn-primary btn-sm btn-asignar" data-id="${r.id}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Asignar</button>` : ''}
+                    ${r.estado === 'PENDIENTE' ? `
+                        <select class="form-control select-responsable" data-id="${r.id}" style="min-width: 180px; margin-bottom: 0.4rem; padding: 0.35rem; font-size: 0.8rem;">
+                            ${crearOpcionesResponsables()}
+                        </select>
+                        <button class="btn btn-primary btn-sm btn-asignar" data-id="${r.id}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Asignar</button>
+                    ` : ''}
                 </td>
             `;
             tbody.appendChild(tr);
         });
 
-        // Event listener para botón de asignar
+        // El admin asigna desde el desplegable para no tener que conocer ids de memoria.
         document.querySelectorAll(".btn-asignar").forEach(btn => {
             btn.addEventListener("click", async (e) => {
                 const reclamoId = e.target.getAttribute("data-id");
-                const responsableId = prompt("Ingrese el ID del Personal/Proveedor a asignar:");
-                if (responsableId) {
-                    try {
-                        const res = await apiRequest(`/api/reclamos/${reclamoId}/asignar`, "PUT", {
-                            responsableId: parseInt(responsableId)
-                        });
-                        logSystem(`Reclamo #${reclamoId} asignado al responsable ID #${responsableId} (Estado: EN_PROCESO)`, "system");
-                        logSystem(`[Email enviado] Notificación enviada al residente del Reclamo #${reclamoId}`, "sms");
-                        cargarReclamosAdmin();
-                    } catch (err) {}
+                const select = document.querySelector(`.select-responsable[data-id="${reclamoId}"]`);
+                const responsableId = select ? select.value : null;
+
+                if (!responsableId) {
+                    mostrarMensaje("Seleccione un responsable para asignar el reclamo.", "warning");
+                    return;
                 }
+
+                try {
+                    const res = await apiRequest(`/api/reclamos/${reclamoId}/asignar`, "PUT", {
+                        responsableId: parseInt(responsableId)
+                    });
+                    logSystem(`Reclamo #${reclamoId} asignado a ${obtenerNombreResponsable(responsableId)} (Estado: EN_PROCESO)`, "system");
+                    logSystem(`[Email enviado] Notificación enviada al residente del Reclamo #${reclamoId}`, "sms");
+                    mostrarMensaje("Responsable asignado correctamente.");
+                    cargarReclamosAdmin();
+                } catch (err) {}
             });
         });
     }
@@ -453,6 +544,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 try {
                     await apiRequest("/api/visitas/salida", "POST", { visitanteId: parseInt(visitanteId) });
                     logSystem(`Visita de Visitante ID #${visitanteId} registrada de salida (Portería)`, "system");
+                    mostrarMensaje("Salida registrada correctamente.");
                     cargarVisitasActivas();
                 } catch (err) {}
             });
@@ -517,6 +609,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     logSystem(`Reclamo #${id} resuelto por responsable ID #${responsableId}`, "system");
                     logSystem(`[Email enviado] Reclamo #${id} ha sido RESUELTO por el proveedor.`, "sms");
                     logSystem(`[Push Alert] Alerta de resolución enviada al residente del Reclamo #${id}`, "push");
+                    mostrarMensaje("Reclamo marcado como resuelto.");
                     
                     // Recargar tareas
                     const list = await apiRequest(`/api/reclamos?responsableId=${responsableId}`);
@@ -556,6 +649,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             logSystem(`Reclamo #${res.id} creado (PENDIENTE) por residente ID #${residenteId}`, "system");
             logSystem(`[Push Alert] Nuevo reclamo #${res.id} registrado para Administración`, "push");
+            mostrarMensaje("Reclamo creado correctamente.");
             document.getElementById("form-reclamo").reset();
             await cargarReclamosResidente();
         } catch (err) {}
@@ -572,6 +666,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const desdeVal = document.getElementById("aut-desde").value;
         const hastaVal = document.getElementById("aut-hasta").value;
 
+        if (!visitanteNombre || !visitanteDni) {
+            mostrarMensaje("Ingrese nombre y DNI del visitante.", "warning");
+            return;
+        }
+
+        if (!validarRangoAutorizacion(desdeVal, hastaVal)) return;
+
         try {
             const res = await apiRequest("/api/autorizaciones", "POST", {
                 residenteId,
@@ -581,6 +682,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 fechaHasta: hastaVal
             });
             logSystem(`Autorización #${res.id} creada para ${visitanteNombre} (DNI: ${visitanteDni})`, "system");
+            mostrarMensaje("Autorización creada correctamente.");
             document.getElementById("form-autorizar").reset();
         } catch (err) {}
     });
@@ -591,6 +693,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const seguridadId = document.getElementById("checkin-seguridad").value;
         const visitanteDni = document.getElementById("checkin-visitante-dni").value.trim();
 
+        if (!seguridadId) {
+            mostrarMensaje("Seleccione el guardia que registra el ingreso.", "warning");
+            return;
+        }
+
+        if (!visitanteDni) {
+            mostrarMensaje("Ingrese el DNI del visitante para validar la autorización.", "warning");
+            return;
+        }
+
         try {
             const res = await apiRequest("/api/visitas/ingreso", "POST", {
                 visitanteDni,
@@ -598,6 +710,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             logSystem(`Ingreso exitoso de visitante DNI ${visitanteDni} registrado por guardia ID #${seguridadId} (Visita #${res.id})`, "system");
             logSystem(`[Push Alert] Visitante ingresando a Unidad Funcional`, "push");
+            mostrarMensaje("Ingreso registrado correctamente.");
             document.getElementById("form-checkin").reset();
             cargarVisitasActivas();
         } catch (err) {}

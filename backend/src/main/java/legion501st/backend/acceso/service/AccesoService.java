@@ -148,8 +148,13 @@ public class AccesoService {
     }
 
     private void validarRangoFechas(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
-        if (fechaDesde == null || fechaHasta == null || fechaHasta.isBefore(fechaDesde)) {
-            throw new IllegalArgumentException("El rango de fechas de la autorización no es válido");
+        if (fechaDesde == null || fechaHasta == null) {
+            throw new IllegalArgumentException("Debe indicar fecha desde y fecha hasta para la autorización");
+        }
+
+        // Evita autorizaciones sin rango real, por ejemplo con misma hora de inicio y fin.
+        if (!fechaHasta.isAfter(fechaDesde)) {
+            throw new IllegalArgumentException("La fecha hasta debe ser posterior a la fecha desde");
         }
     }
 
