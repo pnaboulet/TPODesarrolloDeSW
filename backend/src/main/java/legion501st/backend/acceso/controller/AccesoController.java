@@ -1,5 +1,6 @@
 package legion501st.backend.acceso.controller;
 
+import jakarta.validation.Valid;
 import legion501st.backend.acceso.AutorizacionIngreso;
 import legion501st.backend.acceso.Visita;
 import legion501st.backend.acceso.dto.AutorizacionResponse;
@@ -29,7 +30,7 @@ public class AccesoController {
     }
 
     @PostMapping("/autorizaciones")
-    public ResponseEntity<AutorizacionResponse> crearAutorizacion(@RequestBody CrearAutorizacionRequest request) {
+    public ResponseEntity<AutorizacionResponse> crearAutorizacion(@Valid @RequestBody CrearAutorizacionRequest request) {
         // El controller solo recibe datos y delega la lógica al service
         AutorizacionIngreso autorizacion = accesoService.crearAutorizacion(
                 request.getResidenteId(),
@@ -46,7 +47,7 @@ public class AccesoController {
     }
 
     @PostMapping("/visitas/ingreso")
-    public ResponseEntity<VisitaResponse> registrarIngreso(@RequestBody RegistrarIngresoRequest request) {
+    public ResponseEntity<VisitaResponse> registrarIngreso(@Valid @RequestBody RegistrarIngresoRequest request) {
         // Seguridad registra el ingreso y el service valida si el visitante puede entrar
         Visita visita = accesoService.registrarIngresoVisitante(
                 request.getVisitanteDni(),

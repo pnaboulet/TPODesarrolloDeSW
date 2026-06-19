@@ -1,18 +1,27 @@
 package legion501st.backend.acceso.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+
 import java.time.LocalDateTime;
 
 public class CrearAutorizacionRequest {
 
-    // Residente que está creando la autorización desde su vista
+    @NotNull(message = "Debe seleccionar un residente")
     private Long residenteId;
 
-    // Datos mínimos del visitante que informa el residente en el momento
+    @NotBlank(message = "Debe ingresar el nombre del visitante")
     private String visitanteNombre;
+
+    @NotBlank(message = "Debe ingresar el DNI del visitante")
+    @Pattern(regexp = "\\d{8}", message = "El DNI debe tener exactamente 8 dígitos")
     private String visitanteDni;
 
-    // Rango en el que el visitante puede presentarse en portería
+    @NotNull(message = "Debe ingresar la fecha de inicio")
     private LocalDateTime fechaDesde;
+
+    @NotNull(message = "Debe ingresar la fecha de fin")
     private LocalDateTime fechaHasta;
 
     public CrearAutorizacionRequest() {

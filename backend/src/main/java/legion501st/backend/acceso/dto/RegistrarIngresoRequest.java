@@ -1,11 +1,16 @@
 package legion501st.backend.acceso.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+
 public class RegistrarIngresoRequest {
 
-    // En portería se busca al visitante por DNI, no por un id que el guardia no conoce
+    @NotBlank(message = "Debe ingresar el DNI del visitante")
+    @Pattern(regexp = "\\d{8}", message = "El DNI debe tener exactamente 8 dígitos")
     private String visitanteDni;
 
-    // Guardia que registra el ingreso en portería
+    @NotNull(message = "Debe seleccionar el guardia de seguridad")
     private Long seguridadId;
 
     public RegistrarIngresoRequest() {

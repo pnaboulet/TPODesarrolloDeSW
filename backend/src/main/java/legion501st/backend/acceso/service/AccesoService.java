@@ -62,9 +62,7 @@ public class AccesoService {
     }
 
     public Visita registrarIngresoVisitante(String visitanteDni, Long seguridadId) {
-        if (visitanteDni == null || visitanteDni.isBlank()) {
-            throw new IllegalArgumentException("Debe ingresar el DNI del visitante");
-        }
+        validarDni(visitanteDni);
 
         Visitante visitante = visitanteRepository.findByDni(visitanteDni.trim())
                 .orElseThrow(() -> new IllegalArgumentException("No existe un visitante con ese DNI"));
@@ -142,25 +140,24 @@ public class AccesoService {
             throw new IllegalArgumentException("Debe ingresar el nombre del visitante");
         }
 
-        if (dni == null || dni.isBlank()) {
-            throw new IllegalArgumentException("Debe ingresar el DNI del visitante");
+        validarDni(dni);
+    }
+
+    private void validarDni(String dni) {
+        if (dni == null || !dni.trim().matches("\\d{8}")) {
+            throw new IllegalArgumentException("El DNI debe tener exactamente 8 dígitos");
         }
     }
 
     private void validarRangoFechas(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
-        if (fechaDesde == null || fechaHasta == null) {
-            throw new IllegalArgumentException("Debe indicar fecha desde y fecha hasta para la autorización");
-        }
-
-        // Evita autorizaciones sin rango real, por ejemplo con misma hora de inicio y fin.
-        if (!fechaHasta.isAfter(fechaDesde)) {
-            throw new IllegalArgumentException("La fecha hasta debe ser posterior a la fecha desde");
+        if (fechaDesde == null || fechaHasta == null || !fechaHasta.isAfter(fechaDesde)) {
+            throw new IllegalArgumentException("La fecha de fin debe ser posterior a la fecha de inicio");
         }
     }
 
     private String generarEmailVisitante(String dni) {
         String dniParaEmail = dni.replaceAll("[^0-9A-Za-z]", "");
-        return "visitante." + dniParaEmail + "@barrio.local";
+        return "visitante." + dniParaEmail + "@barrio.com";
     }
 
     private Persona buscarPersona(Long personaId) {

@@ -8,8 +8,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let proveedores = [];
     let reclamos = [];
     let visitasActivas = [];
-    let residenteActivoId = null;
-    let responsablesAsignables = [];
 
     // --- DOM ELEMENTS ---
     const roleSelect = document.getElementById("role-select");
@@ -41,21 +39,30 @@ document.addEventListener("DOMContentLoaded", () => {
         consoleLog.scrollTop = consoleLog.scrollHeight;
     }
 
-    function mostrarMensaje(message, type = "success") {
-        const container = document.getElementById("toast-container");
-        if (!container) return;
 
-        const toast = document.createElement("div");
-        toast.className = `toast-message ${type}`;
-        toast.textContent = message;
+    // Validaciones rápidas del front; el backend también vuelve a controlar estos datos
+    function esDniValido(dni) {
+        return /^\d{8}$/.test(dni);
+    }
 
-        container.appendChild(toast);
+    function esEmailComValido(email) {
+        return /^[^\s@]+@[^\s@]+\.com$/i.test(email);
+    }
 
-        // El mensaje se va solo para no obligar al usuario a cerrar alertas en cada operación.
-        setTimeout(() => {
-            toast.classList.add("hide");
-            setTimeout(() => toast.remove(), 250);
-        }, 3500);
+    function validarDniAntesDeEnviar(dni, contexto = "DNI") {
+        if (!esDniValido(dni)) {
+            alert(`${contexto} debe tener exactamente 8 números`);
+            return false;
+        }
+        return true;
+    }
+
+    function validarEmailAntesDeEnviar(email) {
+        if (!esEmailComValido(email)) {
+            alert("El email debe tener formato usuario@dominio.com");
+            return false;
+        }
+        return true;
     }
 
     // --- ROLE SWITCHER LOGIC ---
@@ -94,76 +101,9 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (error) {
             logSystem(`Error API (${url}): ${error.message}`, "system");
             console.error(error);
-            mostrarMensaje(`Error: ${error.message}`, "error");
+            alert(`Error: ${error.message}`);
             throw error;
         }
-    }
-
-
-    function validarRangoAutorizacion(fechaDesde, fechaHasta) {
-        if (!fechaDesde || !fechaHasta) {
-            mostrarMensaje("Complete la fecha desde y la fecha hasta de la autorización.", "warning");
-            return false;
-        }
-
-        const desde = new Date(fechaDesde);
-        const hasta = new Date(fechaHasta);
-
-        if (Number.isNaN(desde.getTime()) || Number.isNaN(hasta.getTime())) {
-            mostrarMensaje("Revise las fechas ingresadas para la autorización.", "warning");
-            return false;
-        }
-
-        // La autorización solo tiene sentido si termina después de comenzar.
-        if (hasta <= desde) {
-            mostrarMensaje("La fecha hasta debe ser posterior a la fecha desde.", "warning");
-            return false;
-        }
-
-        return true;
-    }
-
-    function obtenerResidenteActivoId() {
-        const select = document.getElementById("residente-activo");
-        const valor = select ? select.value : null;
-
-        // El residente se elige una sola vez para que toda esta vista trabaje con la misma persona.
-        if (!valor) {
-            mostrarMensaje("Seleccione un residente para operar en esta vista.", "warning");
-            return null;
-        }
-        return parseInt(valor);
-    }
-
-    function obtenerTextoUnidad(unidadId) {
-        if (!unidadId) return "Sin unidad";
-
-        const unidad = unidades.find(u => String(u.id) === String(unidadId));
-        if (!unidad) return `Unidad #${unidadId}`;
-
-        // Usamos los datos que ya vienen de /api/unidades para mostrar la relación residente-unidad sin tocar el backend.
-        return `${unidad.identificador} (${unidad.tipoUnidad})`;
-    }
-
-    function obtenerNombreResponsable(responsableId) {
-        if (!responsableId) return '<span class="text-muted">Sin asignar</span>';
-
-        const persona = personas.find(p => String(p.id) === String(responsableId));
-        if (!persona) return `ID #${responsableId}`;
-
-        return `${persona.nombre} ${persona.apellido} (${persona.tipo})`;
-    }
-
-    function crearOpcionesResponsables() {
-        if (!responsablesAsignables.length) {
-            return '<option value="" disabled selected>No hay responsables cargados</option>';
-        }
-
-        // El option muestra nombre y rol, pero el value sigue siendo el id que necesita el backend.
-        return '<option value="" disabled selected>Seleccione responsable...</option>' +
-            responsablesAsignables.map(p =>
-                `<option value="${p.id}">${p.nombre} ${p.apellido} (${p.tipo})</option>`
-            ).join('');
     }
 
     // --- CARGA DE DATOS ---
@@ -227,7 +167,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const listRes = await apiRequest("/api/residentes");
             const listPers = await apiRequest("/api/personal");
             personas = [...listRes.map(r => ({ ...r, tipo: "RESIDENTE" })), ...listPers];
-            responsablesAsignables = listPers.filter(p => p.tipo === "MANTENIMIENTO" || p.tipo === "PROVEEDOR");
             renderTablaPersonas();
         } catch (e) {
             console.log("Error cargando personas");
@@ -254,13 +193,10 @@ document.addEventListener("DOMContentLoaded", () => {
         tbody.innerHTML = "";
         personas.forEach(p => {
             const tr = document.createElement("tr");
-            const unidadTexto = p.tipo === "RESIDENTE" ? obtenerTextoUnidad(p.unidadFuncionalId) : "-";
-
             tr.innerHTML = `
                 <td>${p.nombre} ${p.apellido}</td>
                 <td>${p.dni}</td>
                 <td><span class="badge ${p.tipo === 'RESIDENTE' ? 'badge-success' : 'badge-process'}">${p.tipo}</span></td>
-                <td>${unidadTexto}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -277,7 +213,6 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const result = await apiRequest("/api/barrios", "POST", { nombre, direccion });
             logSystem(`Barrio creado: ${result.nombre} (ID: ${result.id})`, "system");
-            mostrarMensaje("Barrio creado correctamente.");
             document.getElementById("form-barrio").reset();
             cargarBarrios();
         } catch (error) {}
@@ -304,7 +239,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     tipoUnidad
                 });
                 logSystem(`Unidad registrada: ${result.identificador} (ID: ${result.id})`, "system");
-                mostrarMensaje("Unidad funcional registrada correctamente.");
                 document.getElementById("form-unidad").reset();
                 cargarUnidades();
             } catch (error) {}
@@ -339,6 +273,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const dni = document.getElementById("persona-dni").value.trim();
         const email = document.getElementById("persona-email").value.trim();
 
+        if (!validarDniAntesDeEnviar(dni) || !validarEmailAntesDeEnviar(email)) {
+            return;
+        }
+
         try {
             let result;
             if (tipo === "RESIDENTE") {
@@ -355,7 +293,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
             }
             logSystem(`Persona registrada via Factory: ${result.nombre} ${result.apellido} (Tipo: ${tipo})`, "system");
-            mostrarMensaje("Persona registrada correctamente.");
             formPersona.reset();
             groupUnidad.style.display = "flex"; // default
             groupServicio.style.display = "none";
@@ -369,66 +306,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function cargarResidentesYVisitantes() {
         try {
-            const selectActivo = document.getElementById("residente-activo");
-            if (!selectActivo) return;
-
+            const selectRes = document.getElementById("reclamo-residente");
+            const selectResAut = document.getElementById("aut-residente");
+            
+            // El visitante se escribe al autorizar; solo cargamos residentes para los combos
             const resList = await apiRequest("/api/residentes");
-            residentes = resList;
-
-            const valorAnterior = selectActivo.value || residenteActivoId;
-            selectActivo.innerHTML = '<option value="" disabled selected>Seleccione un residente...</option>';
-
-            resList.forEach(r => {
-                const opt = document.createElement("option");
-                opt.value = r.id;
-                opt.textContent = `${r.nombre} ${r.apellido} - ${obtenerTextoUnidad(r.unidadFuncionalId)}`;
-                selectActivo.appendChild(opt);
+            [selectRes, selectResAut].forEach(sel => {
+                sel.innerHTML = '<option value="" disabled selected>Seleccione un residente...</option>';
+                resList.forEach(r => {
+                    const opt = document.createElement("option");
+                    opt.value = r.id;
+                    opt.textContent = `${r.nombre} ${r.apellido}`;
+                    sel.appendChild(opt);
+                });
             });
-
-            // Si ya había uno elegido, lo respetamos. Si no, dejamos seleccionado el primero para poder operar rápido en la demo.
-            if (valorAnterior && resList.some(r => String(r.id) === String(valorAnterior))) {
-                selectActivo.value = valorAnterior;
-                residenteActivoId = parseInt(valorAnterior);
-            } else if (resList.length > 0) {
-                selectActivo.value = resList[0].id;
-                residenteActivoId = parseInt(resList[0].id);
-            } else {
-                residenteActivoId = null;
-            }
         } catch (e) {}
     }
 
     async function cargarReclamosResidente() {
-        const tbody = document.querySelector("#tabla-reclamos-residente tbody");
-        if (!tbody) return;
-
-        tbody.innerHTML = "";
-
-        if (!residenteActivoId) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-muted">Seleccione un residente para ver sus reclamos.</td></tr>';
-            return;
-        }
-
-        try {
-            const lista = await apiRequest(`/api/reclamos?residenteId=${residenteActivoId}`);
-
-            if (!lista.length) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-muted">Este residente todavía no tiene reclamos cargados.</td></tr>';
-                return;
-            }
-
-            lista.forEach(r => {
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td>#${r.id}</td>
-                    <td><strong>${r.tipoReclamo}</strong><br><small>${r.descripcion}</small></td>
-                    <td><span class="badge">${r.prioridad}</span></td>
-                    <td><span class="badge badge-muted">${r.estado}</span></td>
-                    <td>${r.responsableNombreCompleto || '<span class="text-muted">Sin asignar</span>'}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        } catch (e) {}
+        // Dev 3 completará la lógica para cargar reclamos del residente seleccionado
+        console.log("Cargar reclamos residente...");
     }
 
     async function cargarReclamosAdmin() {
@@ -459,40 +356,29 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td><strong>${r.tipoReclamo}</strong><br><small>${r.descripcion}</small></td>
                 <td><span class="badge">${r.prioridad}</span></td>
                 <td><span class="badge ${badgeClass}">${r.estado}</span></td>
-                <td>${obtenerNombreResponsable(r.responsableId)}</td>
+                <td>${r.responsableId ? 'ID #' + r.responsableId : '<span class="text-muted">Sin asignar</span>'}</td>
                 <td>
-                    ${r.estado === 'PENDIENTE' ? `
-                        <select class="form-control select-responsable" data-id="${r.id}" style="min-width: 180px; margin-bottom: 0.4rem; padding: 0.35rem; font-size: 0.8rem;">
-                            ${crearOpcionesResponsables()}
-                        </select>
-                        <button class="btn btn-primary btn-sm btn-asignar" data-id="${r.id}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Asignar</button>
-                    ` : ''}
+                    ${r.estado === 'PENDIENTE' ? `<button class="btn btn-primary btn-sm btn-asignar" data-id="${r.id}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Asignar</button>` : ''}
                 </td>
             `;
             tbody.appendChild(tr);
         });
 
-        // El admin asigna desde el desplegable para no tener que conocer ids de memoria.
+        // Event listener para botón de asignar
         document.querySelectorAll(".btn-asignar").forEach(btn => {
             btn.addEventListener("click", async (e) => {
                 const reclamoId = e.target.getAttribute("data-id");
-                const select = document.querySelector(`.select-responsable[data-id="${reclamoId}"]`);
-                const responsableId = select ? select.value : null;
-
-                if (!responsableId) {
-                    mostrarMensaje("Seleccione un responsable para asignar el reclamo.", "warning");
-                    return;
+                const responsableId = prompt("Ingrese el ID del Personal/Proveedor a asignar:");
+                if (responsableId) {
+                    try {
+                        const res = await apiRequest(`/api/reclamos/${reclamoId}/asignar`, "PUT", {
+                            responsableId: parseInt(responsableId)
+                        });
+                        logSystem(`Reclamo #${reclamoId} asignado al responsable ID #${responsableId} (Estado: EN_PROCESO)`, "system");
+                        logSystem(`[Email enviado] Notificación enviada al residente del Reclamo #${reclamoId}`, "sms");
+                        cargarReclamosAdmin();
+                    } catch (err) {}
                 }
-
-                try {
-                    const res = await apiRequest(`/api/reclamos/${reclamoId}/asignar`, "PUT", {
-                        responsableId: parseInt(responsableId)
-                    });
-                    logSystem(`Reclamo #${reclamoId} asignado a ${obtenerNombreResponsable(responsableId)} (Estado: EN_PROCESO)`, "system");
-                    logSystem(`[Email enviado] Notificación enviada al residente del Reclamo #${reclamoId}`, "sms");
-                    mostrarMensaje("Responsable asignado correctamente.");
-                    cargarReclamosAdmin();
-                } catch (err) {}
             });
         });
     }
@@ -544,7 +430,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 try {
                     await apiRequest("/api/visitas/salida", "POST", { visitanteId: parseInt(visitanteId) });
                     logSystem(`Visita de Visitante ID #${visitanteId} registrada de salida (Portería)`, "system");
-                    mostrarMensaje("Salida registrada correctamente.");
                     cargarVisitasActivas();
                 } catch (err) {}
             });
@@ -609,7 +494,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     logSystem(`Reclamo #${id} resuelto por responsable ID #${responsableId}`, "system");
                     logSystem(`[Email enviado] Reclamo #${id} ha sido RESUELTO por el proveedor.`, "sms");
                     logSystem(`[Push Alert] Alerta de resolución enviada al residente del Reclamo #${id}`, "push");
-                    mostrarMensaje("Reclamo marcado como resuelto.");
                     
                     // Recargar tareas
                     const list = await apiRequest(`/api/reclamos?responsableId=${responsableId}`);
@@ -620,69 +504,55 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // --- FORM SUBS FOR DEV 2 & 3 ---
-    const selectResidenteActivo = document.getElementById("residente-activo");
-    if (selectResidenteActivo) {
-        selectResidenteActivo.addEventListener("change", async (e) => {
-            residenteActivoId = parseInt(e.target.value);
-            const residente = residentes.find(r => r.id === residenteActivoId);
-            logSystem(`Operando como residente: ${residente ? residente.nombre + " " + residente.apellido : "ID #" + residenteActivoId}`, "system");
-            await cargarReclamosResidente();
-        });
-    }
-
     // Enlazar form-reclamo (Dev 3)
     document.getElementById("form-reclamo").addEventListener("submit", async (e) => {
         e.preventDefault();
-        const residenteId = obtenerResidenteActivoId();
-        if (!residenteId) return;
-
+        const residenteId = document.getElementById("reclamo-residente").value;
         const tipoReclamo = document.getElementById("reclamo-tipo").value;
         const prioridad = document.getElementById("reclamo-prioridad").value;
         const descripcion = document.getElementById("reclamo-descripcion").value.trim();
 
         try {
             const res = await apiRequest("/api/reclamos", "POST", {
-                residenteId,
+                residenteId: parseInt(residenteId),
                 tipoReclamo,
                 prioridad,
                 descripcion
             });
             logSystem(`Reclamo #${res.id} creado (PENDIENTE) por residente ID #${residenteId}`, "system");
             logSystem(`[Push Alert] Nuevo reclamo #${res.id} registrado para Administración`, "push");
-            mostrarMensaje("Reclamo creado correctamente.");
             document.getElementById("form-reclamo").reset();
-            await cargarReclamosResidente();
+            cargarReclamosResidente();
         } catch (err) {}
     });
 
     // Enlazar form-autorizar (Dev 2)
     document.getElementById("form-autorizar").addEventListener("submit", async (e) => {
         e.preventDefault();
-        const residenteId = obtenerResidenteActivoId();
-        if (!residenteId) return;
-
+        const residenteId = document.getElementById("aut-residente").value;
         const visitanteNombre = document.getElementById("aut-visitante-nombre").value.trim();
         const visitanteDni = document.getElementById("aut-visitante-dni").value.trim();
         const desdeVal = document.getElementById("aut-desde").value;
         const hastaVal = document.getElementById("aut-hasta").value;
 
-        if (!visitanteNombre || !visitanteDni) {
-            mostrarMensaje("Ingrese nombre y DNI del visitante.", "warning");
+        if (!validarDniAntesDeEnviar(visitanteDni, "El DNI del visitante")) {
             return;
         }
 
-        if (!validarRangoAutorizacion(desdeVal, hastaVal)) return;
+        if (!desdeVal || !hastaVal || new Date(hastaVal) <= new Date(desdeVal)) {
+            alert("La fecha/hora hasta debe ser posterior a la fecha/hora desde");
+            return;
+        }
 
         try {
             const res = await apiRequest("/api/autorizaciones", "POST", {
-                residenteId,
+                residenteId: parseInt(residenteId),
                 visitanteNombre,
                 visitanteDni,
                 fechaDesde: desdeVal,
                 fechaHasta: hastaVal
             });
             logSystem(`Autorización #${res.id} creada para ${visitanteNombre} (DNI: ${visitanteDni})`, "system");
-            mostrarMensaje("Autorización creada correctamente.");
             document.getElementById("form-autorizar").reset();
         } catch (err) {}
     });
@@ -693,13 +563,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const seguridadId = document.getElementById("checkin-seguridad").value;
         const visitanteDni = document.getElementById("checkin-visitante-dni").value.trim();
 
-        if (!seguridadId) {
-            mostrarMensaje("Seleccione el guardia que registra el ingreso.", "warning");
-            return;
-        }
-
-        if (!visitanteDni) {
-            mostrarMensaje("Ingrese el DNI del visitante para validar la autorización.", "warning");
+        if (!validarDniAntesDeEnviar(visitanteDni, "El DNI del visitante")) {
             return;
         }
 
@@ -710,7 +574,6 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             logSystem(`Ingreso exitoso de visitante DNI ${visitanteDni} registrado por guardia ID #${seguridadId} (Visita #${res.id})`, "system");
             logSystem(`[Push Alert] Visitante ingresando a Unidad Funcional`, "push");
-            mostrarMensaje("Ingreso registrado correctamente.");
             document.getElementById("form-checkin").reset();
             cargarVisitasActivas();
         } catch (err) {}

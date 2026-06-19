@@ -24,9 +24,6 @@
         </div>
     </header>
 
-    <!-- Mensajes cortos para confirmar acciones importantes sin depender solo de la consola -->
-    <div id="toast-container" class="toast-container" aria-live="polite"></div>
-
     <!-- App Main Workspace -->
     <main class="app-container">
         <div class="main-content">
@@ -101,11 +98,11 @@
                             </div>
                             <div class="form-group">
                                 <label for="persona-dni">DNI</label>
-                                <input type="text" id="persona-dni" class="form-control" placeholder="Ej: 35123456" required>
+                                <input type="text" id="persona-dni" class="form-control" placeholder="Ej: 35123456" inputmode="numeric" maxlength="8" pattern="[0-9]{8}" title="El DNI debe tener exactamente 8 números" required>
                             </div>
                             <div class="form-group">
                                 <label for="persona-email">Email</label>
-                                <input type="email" id="persona-email" class="form-control" placeholder="Ej: juan@email.com" required>
+                                <input type="email" id="persona-email" class="form-control" placeholder="Ej: juan@email.com" pattern="^[^\s@]+@[^\s@]+\.com$" title="El email debe terminar en .com" required>
                             </div>
                             
                             <!-- Campo dinámico para Residentes -->
@@ -156,7 +153,6 @@
                                             <th>Nombre</th>
                                             <th>DNI</th>
                                             <th>Rol/Tipo</th>
-                                            <th>Unidad Funcional</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -197,24 +193,15 @@
             <!-- ========================================== -->
             <section id="panel-residente" class="role-panel">
                 <div class="glass-panel">
-                    <h2 class="panel-title">🏠 Vista de Residente</h2>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="residente-activo">Operar como residente</label>
-                            <select id="residente-activo" class="form-control" required>
-                                <option value="" disabled selected>Seleccione un residente...</option>
-                            </select>
-                        </div>
-                    </div>
-                    <p class="text-muted" style="margin-top: 0.75rem;">
-                        El residente elegido se usa para crear reclamos, autorizar visitantes y consultar sus solicitudes.
-                    </p>
-                </div>
-
-                <div class="glass-panel">
                     <h2 class="panel-title">✍️ Crear Reclamo o Solicitud</h2>
                     <form id="form-reclamo">
                         <div class="form-grid">
+                            <div class="form-group">
+                                <label for="reclamo-residente">¿Quién reclama? (Residente)</label>
+                                <select id="reclamo-residente" class="form-control" required>
+                                    <option value="" disabled selected>Seleccione un residente...</option>
+                                </select>
+                            </div>
                             <div class="form-group">
                                 <label for="reclamo-tipo">Tipo de Reclamo</label>
                                 <select id="reclamo-tipo" class="form-control" required>
@@ -267,12 +254,18 @@
                     <form id="form-autorizar">
                         <div class="form-grid">
                             <div class="form-group">
+                                <label for="aut-residente">Residente Autorizante</label>
+                                <select id="aut-residente" class="form-control" required>
+                                    <option value="" disabled selected>Seleccione un residente...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
                                 <label for="aut-visitante-nombre">Nombre del Visitante</label>
                                 <input type="text" id="aut-visitante-nombre" class="form-control" placeholder="Ej: Juan" required>
                             </div>
                             <div class="form-group">
                                 <label for="aut-visitante-dni">DNI del Visitante</label>
-                                <input type="text" id="aut-visitante-dni" class="form-control" placeholder="Ej: 12345678" required>
+                                <input type="text" id="aut-visitante-dni" class="form-control" placeholder="Ej: 12345678" inputmode="numeric" maxlength="8" pattern="[0-9]{8}" title="El DNI debe tener exactamente 8 números" required>
                             </div>
                             <div class="form-group">
                                 <label for="aut-desde">Fecha/Hora Desde</label>
@@ -304,7 +297,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="checkin-visitante-dni">DNI del Visitante</label>
-                                <input type="text" id="checkin-visitante-dni" class="form-control" placeholder="DNI presentado en portería" required>
+                                <input type="text" id="checkin-visitante-dni" class="form-control" placeholder="DNI presentado en portería" inputmode="numeric" maxlength="8" pattern="[0-9]{8}" title="El DNI debe tener exactamente 8 números" required>
                             </div>
                         </div>
                         <button type="submit" class="btn btn-primary">Verificar & Registrar Entrada (Strategy)</button>
