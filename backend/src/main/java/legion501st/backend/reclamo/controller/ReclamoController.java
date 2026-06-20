@@ -6,6 +6,7 @@ import legion501st.backend.reclamo.dto.AsignarResponsableDto;
 import legion501st.backend.reclamo.dto.CrearReclamoDto;
 import legion501st.backend.reclamo.dto.ReclamoDto;
 import legion501st.backend.reclamo.dto.HistorialEstadoDto;
+import legion501st.backend.facade.GestionBarrioFacade;
 import legion501st.backend.reclamo.service.ReclamoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,28 +19,30 @@ import java.util.List;
 public class ReclamoController {
 
     private final ReclamoService reclamoService;
+    private final GestionBarrioFacade barrioFacade;
 
-    public ReclamoController(ReclamoService reclamoService) {
+    public ReclamoController(ReclamoService reclamoService, GestionBarrioFacade barrioFacade) {
         this.reclamoService = reclamoService;
+        this.barrioFacade = barrioFacade;
     }
 
     @PostMapping("/reclamos")
     public ResponseEntity<ReclamoDto> crearReclamo(@Valid @RequestBody CrearReclamoDto dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(reclamoService.crearReclamo(dto));
+        return ResponseEntity.status(HttpStatus.CREATED).body(barrioFacade.crearReclamo(dto));
     }
 
     @PutMapping("/reclamos/{id}/estado")
     public ResponseEntity<ReclamoDto> cambiarEstado(
             @PathVariable Long id,
             @Valid @RequestBody ActualizarEstadoDto dto) {
-        return ResponseEntity.ok(reclamoService.cambiarEstado(id, dto.nuevoEstado(), dto.observacion()));
+        return ResponseEntity.ok(barrioFacade.cambiarEstadoReclamo(id, dto.nuevoEstado(), dto.observacion()));
     }
 
     @PutMapping("/reclamos/{id}/asignar")
     public ResponseEntity<ReclamoDto> asignarResponsable(
             @PathVariable Long id,
             @Valid @RequestBody AsignarResponsableDto dto) {
-        return ResponseEntity.ok(reclamoService.asignarResponsable(id, dto.responsableId()));
+        return ResponseEntity.ok(barrioFacade.asignarResponsable(id, dto.responsableId()));
     }
 
     @GetMapping("/reclamos")

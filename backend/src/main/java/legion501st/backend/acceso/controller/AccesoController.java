@@ -8,6 +8,7 @@ import legion501st.backend.acceso.dto.CrearAutorizacionRequest;
 import legion501st.backend.acceso.dto.RegistrarIngresoRequest;
 import legion501st.backend.acceso.dto.RegistrarSalidaRequest;
 import legion501st.backend.acceso.dto.VisitaResponse;
+import legion501st.backend.facade.GestionBarrioFacade;
 import legion501st.backend.acceso.service.AccesoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,9 +25,11 @@ import java.util.List;
 public class AccesoController {
 
     private final AccesoService accesoService;
+    private final GestionBarrioFacade barrioFacade;
 
-    public AccesoController(AccesoService accesoService) {
+    public AccesoController(AccesoService accesoService, GestionBarrioFacade barrioFacade) {
         this.accesoService = accesoService;
+        this.barrioFacade = barrioFacade;
     }
 
     @PostMapping("/autorizaciones")
@@ -48,8 +51,8 @@ public class AccesoController {
 
     @PostMapping("/visitas/ingreso")
     public ResponseEntity<VisitaResponse> registrarIngreso(@Valid @RequestBody RegistrarIngresoRequest request) {
-        // Seguridad registra el ingreso y el service valida si el visitante puede entrar
-        Visita visita = accesoService.registrarIngresoVisitante(
+        // Seguridad registra el ingreso delegando a la fachada
+        Visita visita = barrioFacade.registrarIngresoVisitante(
                 request.getVisitanteDni(),
                 request.getSeguridadId()
         );
@@ -61,8 +64,8 @@ public class AccesoController {
 
     @PostMapping("/visitas/salida")
     public ResponseEntity<VisitaResponse> registrarSalida(@RequestBody RegistrarSalidaRequest request) {
-        // Busca la visita que quedó EN_CURSO y la marca como finalizada
-        Visita visita = accesoService.registrarSalidaVisitante(request.getVisitanteId());
+        // Registra la salida a través de la fachada
+        Visita visita = barrioFacade.registrarSalidaVisitante(request.getVisitanteId());
 
         return ResponseEntity.ok(VisitaResponse.desdeEntidad(visita));
     }

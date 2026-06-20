@@ -49,12 +49,14 @@ public class ReclamoService {
 
         Residente residente = (Residente) persona;
 
-        Reclamo reclamo = new Reclamo(
-                residente,
-                dto.tipoReclamo(),
-                dto.descripcion(),
-                dto.prioridad()
-        );
+        Reclamo reclamo = Reclamo.builder()
+                .residente(residente)
+                .tipoReclamo(dto.tipoReclamo())
+                .descripcion(dto.descripcion())
+                .prioridad(dto.prioridad())
+                .estado(EstadoReclamo.PENDIENTE)
+                .fechaCreacion(java.time.LocalDateTime.now())
+                .build();
 
         reclamo = reclamoRepository.save(reclamo);
 
@@ -177,18 +179,18 @@ public class ReclamoService {
         String responsableNombre = reclamo.getResponsable() != null ?
                 reclamo.getResponsable().getNombre() + " " + reclamo.getResponsable().getApellido() : null;
 
-        return new ReclamoDto(
-                reclamo.getId(),
-                reclamo.getResidente().getId(),
-                reclamo.getResidente().getNombre() + " " + reclamo.getResidente().getApellido(),
-                reclamo.getTipoReclamo(),
-                reclamo.getDescripcion(),
-                reclamo.getPrioridad(),
-                reclamo.getEstado(),
-                reclamo.getFechaCreacion(),
-                responsableId,
-                responsableNombre
-        );
+        return ReclamoDto.builder()
+                .id(reclamo.getId())
+                .residenteId(reclamo.getResidente().getId())
+                .residenteNombreCompleto(reclamo.getResidente().getNombre() + " " + reclamo.getResidente().getApellido())
+                .tipoReclamo(reclamo.getTipoReclamo())
+                .descripcion(reclamo.getDescripcion())
+                .prioridad(reclamo.getPrioridad())
+                .estado(reclamo.getEstado())
+                .fechaCreacion(reclamo.getFechaCreacion())
+                .responsableId(responsableId)
+                .responsableNombreCompleto(responsableNombre)
+                .build();
     }
 
     private HistorialEstadoDto mapToHistorialDto(HistorialEstado historial) {

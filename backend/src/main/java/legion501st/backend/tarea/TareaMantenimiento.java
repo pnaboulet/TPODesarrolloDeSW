@@ -6,8 +6,13 @@ import jakarta.validation.constraints.NotNull;
 import legion501st.backend.personas.Persona;
 import legion501st.backend.reclamo.Reclamo;
 
+import lombok.Builder;
+import lombok.AllArgsConstructor;
+
 @Entity
 @Table(name = "tareas_mantenimiento")
+@Builder
+@AllArgsConstructor
 public class TareaMantenimiento {
 
     @Id
@@ -32,13 +37,6 @@ public class TareaMantenimiento {
     private Persona responsable;
 
     public TareaMantenimiento() {}
-
-    public TareaMantenimiento(Reclamo reclamo, String descripcion, Persona responsable) {
-        this.reclamo = reclamo;
-        this.descripcion = descripcion;
-        this.responsable = responsable;
-        this.estado = EstadoTarea.PENDIENTE;
-    }
 
     @PrePersist
     protected void onCreate() {

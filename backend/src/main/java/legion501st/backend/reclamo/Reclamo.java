@@ -6,10 +6,15 @@ import jakarta.validation.constraints.NotNull;
 import legion501st.backend.personas.Persona;
 import legion501st.backend.personas.Residente;
 
+import lombok.Builder;
+import lombok.AllArgsConstructor;
+
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "reclamos")
+@Builder
+@AllArgsConstructor
 public class Reclamo {
 
     @Id
@@ -48,15 +53,6 @@ public class Reclamo {
     private Persona responsable;
 
     public Reclamo() {
-        this.fechaCreacion = LocalDateTime.now();
-    }
-
-    public Reclamo(Residente residente, TipoReclamo tipoReclamo, String descripcion, Prioridad prioridad) {
-        this.residente = residente;
-        this.tipoReclamo = tipoReclamo;
-        this.descripcion = descripcion;
-        this.prioridad = prioridad;
-        this.estado = EstadoReclamo.PENDIENTE;
         this.fechaCreacion = LocalDateTime.now();
     }
 

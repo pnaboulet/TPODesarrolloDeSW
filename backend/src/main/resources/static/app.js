@@ -218,11 +218,6 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (error) {}
     });
 
-    // Registrar Unidad Funcional
-    document.getElementById("form-誠nidad")?.addEventListener("submit", async (e) => {
-        // En index.html tiene id form-unidad, fix typo en listener
-        // (En HTML está form-unidad)
-    });
     // Se mapea correctamente con fallback al id real
     const formUnidad = document.getElementById("form-unidad");
     if (formUnidad) {

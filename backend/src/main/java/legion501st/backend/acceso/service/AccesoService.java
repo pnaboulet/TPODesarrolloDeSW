@@ -74,35 +74,42 @@ public class AccesoService {
         Persona visitante = buscarPersona(visitanteId);
         Persona seguridad = buscarPersona(seguridadId);
 
-        if (!(visitante instanceof Visitante)) {
-            throw new IllegalArgumentException("Solo se puede registrar ingreso para visitantes");
-        }
-
         if (!(seguridad instanceof PersonalSeguridad)) {
             throw new IllegalArgumentException("El ingreso debe registrarlo personal de seguridad");
         }
 
         LocalDateTime ahora = LocalDateTime.now();
 
-        AutorizacionIngreso autorizacion = autorizacionRepository
-                .findFirstByVisitanteIdAndUtilizadaFalseAndFechaDesdeLessThanEqualAndFechaHastaGreaterThanEqualOrderByFechaHastaAsc(
-                        visitanteId,
-                        ahora,
-                        ahora
-                )
-                .orElse(null);
+        AutorizacionIngreso autorizacion = null;
+        if (visitante instanceof Visitante) {
+            autorizacion = autorizacionRepository
+                    .findFirstByVisitanteIdAndUtilizadaFalseAndFechaDesdeLessThanEqualAndFechaHastaGreaterThanEqualOrderByFechaHastaAsc(
+                            visitanteId,
+                            ahora,
+                            ahora
+                    )
+                    .orElse(null);
+        }
 
         // Strategy: el service delega la regla de ingreso al protocolo que corresponda
         ProtocoloAcceso protocolo = buscarProtocolo(visitante);
 
         if (!protocolo.puedeIngresar(visitante, autorizacion)) {
-            throw new IllegalArgumentException("El visitante no tiene una autorización vigente");
+            throw new IllegalArgumentException("La persona no cumple con el protocolo de acceso o no tiene autorización vigente");
         }
 
-        autorizacion.marcarComoUtilizada();
-        autorizacionRepository.save(autorizacion);
+        if (autorizacion != null) {
+            autorizacion.marcarComoUtilizada();
+            autorizacionRepository.save(autorizacion);
+        }
 
-        Visita visita = new Visita((Visitante) visitante, autorizacion, (PersonalSeguridad) seguridad);
+        Visita visita = Visita.builder()
+                .visitante(visitante)
+                .autorizacionIngreso(autorizacion)
+                .registradoPor((PersonalSeguridad) seguridad)
+                .fechaIngreso(ahora)
+                .estado(EstadoVisita.EN_CURSO)
+                .build();
         return visitaRepository.save(visita);
     }
 

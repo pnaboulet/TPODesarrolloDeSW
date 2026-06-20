@@ -8,6 +8,7 @@ import legion501st.backend.tarea.TareaMantenimiento;
 import legion501st.backend.tarea.dto.CrearTareaMantenimientoDto;
 import legion501st.backend.tarea.dto.TareaMantenimientoDto;
 import legion501st.backend.tarea.repository.TareaMantenimientoRepository;
+import legion501st.backend.tarea.EstadoTarea;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,11 +42,12 @@ public class TareaService {
         Persona responsable = personaRepository.findById(dto.responsableId())
                 .orElseThrow(() -> new IllegalArgumentException("Responsable no encontrado con ID: " + dto.responsableId()));
 
-        TareaMantenimiento tarea = new TareaMantenimiento(
-                reclamo,
-                dto.descripcion(),
-                responsable
-        );
+        TareaMantenimiento tarea = TareaMantenimiento.builder()
+                .reclamo(reclamo)
+                .descripcion(dto.descripcion())
+                .responsable(responsable)
+                .estado(EstadoTarea.PENDIENTE)
+                .build();
 
         tarea = tareaRepository.save(tarea);
         return mapToDto(tarea);

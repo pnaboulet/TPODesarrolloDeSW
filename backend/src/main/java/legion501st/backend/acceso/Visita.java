@@ -11,13 +11,18 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import legion501st.backend.personas.Persona;
 import legion501st.backend.personas.PersonalSeguridad;
-import legion501st.backend.personas.Visitante;
+
+import lombok.Builder;
+import lombok.AllArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "visitas")
+@Builder
+@AllArgsConstructor
 public class Visita {
 
     @Id
@@ -27,7 +32,7 @@ public class Visita {
     // Persona externa que ingresó al barrio
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "visitante_id")
-    private Visitante visitante;
+    private Persona visitante;
 
     // Autorización que se usó para permitir el ingreso
     @ManyToOne(fetch = FetchType.LAZY)
@@ -53,15 +58,6 @@ public class Visita {
     public Visita() {
     }
 
-    public Visita(Visitante visitante, AutorizacionIngreso autorizacionIngreso,
-                  PersonalSeguridad registradoPor) {
-        this.visitante = visitante;
-        this.autorizacionIngreso = autorizacionIngreso;
-        this.registradoPor = registradoPor;
-        this.fechaIngreso = LocalDateTime.now();
-        this.estado = EstadoVisita.EN_CURSO;
-    }
-
     public void registrarSalida() {
         // Cuando sale, guardamos la hora y cerramos la visita
         this.fechaSalida = LocalDateTime.now();
@@ -84,11 +80,11 @@ public class Visita {
         this.id = id;
     }
 
-    public Visitante getVisitante() {
+    public Persona getVisitante() {
         return visitante;
     }
 
-    public void setVisitante(Visitante visitante) {
+    public void setVisitante(Persona visitante) {
         this.visitante = visitante;
     }
 
