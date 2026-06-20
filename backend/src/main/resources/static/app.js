@@ -148,7 +148,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 throw new Error(userMessage);
             }
             if (response.status === 204) return null;
-            return await response.json();
+            const text = await response.text();
+            return text ? JSON.parse(text) : null;
         } catch (error) {
             logSystem(`Error API (${url}): ${error.message}`, "system");
             console.error(error);
@@ -277,12 +278,20 @@ document.addEventListener("DOMContentLoaded", () => {
             const resAsociados = personas.filter(p => p.tipo === "RESIDENTE" && p.unidadFuncionalId === u.id);
             const resNombres = resAsociados.map(r => `${r.nombre} ${r.apellido}`).join(", ") || "<span class='text-muted'>Ninguno</span>";
             
+            const btnClass = u.habilitada ? "badge-success" : "badge-danger";
+            const btnText = u.habilitada ? "Activa" : "Suspendida";
+
             tr.innerHTML = `
                 <td>${u.id}</td>
                 <td>${u.identificador}</td>
                 <td><span class="badge badge-muted">${u.tipoUnidad}</span></td>
                 <td>${barrio ? barrio.nombre : 'Barrio #' + u.barrioId}</td>
                 <td>${resNombres}</td>
+                <td>
+                    <button class="badge ${btnClass}" style="cursor: pointer; border: none; font-family: inherit; font-size: 0.75rem;" onclick="toggleUnidadHabilitacion(${u.id})">
+                        ${btnText}
+                    </button>
+                </td>
             `;
             tbody.appendChild(tr);
         });
@@ -312,11 +321,19 @@ document.addEventListener("DOMContentLoaded", () => {
             const b = uf ? barrios.find(barr => barr.id === uf.barrioId) : null;
             const asociacion = uf ? `Unidad ${uf.identificador} (${b ? b.nombre : 'Barrio #' + uf.barrioId})` : "Unidad no asignada";
             
+            const btnClass = p.habilitado ? "badge-success" : "badge-danger";
+            const btnText = p.habilitado ? "Habilitado" : "Bloqueado";
+
             tr.innerHTML = `
                 <td>${p.nombre} ${p.apellido}</td>
                 <td>${p.dni}</td>
                 <td><span class="badge badge-success">RESIDENTE</span></td>
                 <td>${asociacion}</td>
+                <td>
+                    <button class="badge ${btnClass}" style="cursor: pointer; border: none; font-family: inherit; font-size: 0.75rem;" onclick="togglePersonaHabilitacion(${p.id})">
+                        ${btnText}
+                    </button>
+                </td>
             `;
             tbody.appendChild(tr);
         });
@@ -326,7 +343,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // Añadir fila divisoria en la tabla para mejor claridad
             const rowHeader = document.createElement("tr");
             rowHeader.innerHTML = `
-                <td colspan="4" style="background: rgba(255,255,255,0.02); font-weight: 600; font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; padding: 0.5rem 1rem;">
+                <td colspan="5" style="background: rgba(255,255,255,0.02); font-weight: 600; font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; padding: 0.5rem 1rem;">
                     ⚙️ Personal y Proveedores
                 </td>
             `;
@@ -345,11 +362,19 @@ document.addEventListener("DOMContentLoaded", () => {
                     asociacion = "Administración";
                 }
                 
+                const btnClass = p.habilitado ? "badge-success" : "badge-danger";
+                const btnText = p.habilitado ? "Habilitado" : "Bloqueado";
+
                 tr.innerHTML = `
                     <td>${p.nombre} ${p.apellido}</td>
                     <td>${p.dni}</td>
                     <td><span class="badge badge-process">${p.tipo}</span></td>
                     <td>${asociacion}</td>
+                    <td>
+                        <button class="badge ${btnClass}" style="cursor: pointer; border: none; font-family: inherit; font-size: 0.75rem;" onclick="togglePersonaHabilitacion(${p.id})">
+                            ${btnText}
+                        </button>
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -933,6 +958,29 @@ document.addEventListener("DOMContentLoaded", () => {
             await cargarDatosPorRol("GUARDIA");
         } catch (err) {}
     });
+
+    // --- HABILITACIÓN/DESHABILITACIÓN INTERACTIVA ---
+    window.togglePersonaHabilitacion = async (id) => {
+        try {
+            await apiRequest(`/api/personas/${id}/toggle-habilitacion`, "PUT");
+            showToast("Estado de persona modificado con éxito.", "success");
+            const currentRol = document.getElementById("role-select").value;
+            await cargarDatosPorRol(currentRol);
+        } catch (err) {
+            showToast("Error al modificar la habilitación de la persona.", "danger");
+        }
+    };
+
+    window.toggleUnidadHabilitacion = async (id) => {
+        try {
+            await apiRequest(`/api/unidades/${id}/toggle-habilitacion`, "PUT");
+            showToast("Estado de unidad funcional modificado con éxito.", "success");
+            const currentRol = document.getElementById("role-select").value;
+            await cargarDatosPorRol(currentRol);
+        } catch (err) {
+            showToast("Error al modificar la habilitación de la unidad.", "danger");
+        }
+    };
 
     // --- INICIALIZACIÓN GENERAL ---
     cargarDatosPorRol("ADMINISTRADOR");

@@ -16,5 +16,7 @@ public record UnidadFuncionalDto(
     String identificador,
     
     @NotNull(message = "El tipo de unidad no puede ser nulo")
-    TipoUnidad tipoUnidad
+    TipoUnidad tipoUnidad,
+
+    Boolean habilitada
 ) {}

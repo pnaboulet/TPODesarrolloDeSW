@@ -60,4 +60,9 @@ public class BarrioController {
     public ResponseEntity<UnidadFuncionalDto> obtenerUnidadFuncional(@PathVariable Long id) {
         return ResponseEntity.ok(unidadFuncionalService.obtenerUnidadFuncionalPorId(id));
     }
+
+    @PutMapping("/unidades/{id}/toggle-habilitacion")
+    public ResponseEntity<UnidadFuncionalDto> toggleHabilitada(@PathVariable Long id) {
+        return ResponseEntity.ok(unidadFuncionalService.toggleHabilitada(id));
+    }
 }

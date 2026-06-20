@@ -28,5 +28,7 @@ public record ResidenteDto(
     String email,
 
     @NotNull(message = "El ID de la unidad funcional asociada es obligatorio")
-    Long unidadFuncionalId
+    Long unidadFuncionalId,
+
+    Boolean habilitado
 ) {}

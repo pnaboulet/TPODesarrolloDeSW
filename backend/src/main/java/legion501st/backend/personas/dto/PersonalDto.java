@@ -31,5 +31,7 @@ public record PersonalDto(
     @NotNull(message = "El tipo de personal/persona no puede ser nulo")
     TipoPersona tipo,
 
-    String tipoServicio // Solo aplicable si es PROVEEDOR
+    String tipoServicio, // Solo aplicable si es PROVEEDOR
+
+    Boolean habilitado
 ) {}

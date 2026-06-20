@@ -28,6 +28,18 @@ public class UnidadFuncionalService {
         Barrio barrio = barrioRepository.findById(dto.barrioId())
                 .orElseThrow(() -> new IllegalArgumentException("Barrio no encontrado con ID: " + dto.barrioId()));
         UnidadFuncional uf = new UnidadFuncional(barrio, dto.identificador(), dto.tipoUnidad());
+        if (dto.habilitada() != null) {
+            uf.setHabilitada(dto.habilitada());
+        }
+        uf = repository.save(uf);
+        return mapToDto(uf);
+    }
+
+    @Transactional
+    public UnidadFuncionalDto toggleHabilitada(Long id) {
+        UnidadFuncional uf = repository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Unidad funcional no encontrada con ID: " + id));
+        uf.setHabilitada(!uf.isHabilitada());
         uf = repository.save(uf);
         return mapToDto(uf);
     }
@@ -51,6 +63,6 @@ public class UnidadFuncionalService {
     }
 
     private UnidadFuncionalDto mapToDto(UnidadFuncional uf) {
-        return new UnidadFuncionalDto(uf.getId(), uf.getBarrio().getId(), uf.getIdentificador(), uf.getTipoUnidad());
+        return new UnidadFuncionalDto(uf.getId(), uf.getBarrio().getId(), uf.getIdentificador(), uf.getTipoUnidad(), uf.isHabilitada());
     }
 }

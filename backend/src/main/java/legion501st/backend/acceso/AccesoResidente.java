@@ -14,7 +14,11 @@ public class AccesoResidente implements ProtocoloAcceso {
 
     @Override
     public boolean puedeIngresar(Persona persona, AutorizacionIngreso autorizacionIngreso) {
-        // si es residente registrado, puede ingresar
-        return persona != null && persona.getId() != null;
+        if (!(persona instanceof Residente residente)) {
+            return false;
+        }
+        // El residente debe estar habilitado y su unidad funcional (si tiene una asignada) también debe estar habilitada
+        return residente.isHabilitado() && 
+               (residente.getUnidadFuncional() == null || residente.getUnidadFuncional().isHabilitada());
     }
 }

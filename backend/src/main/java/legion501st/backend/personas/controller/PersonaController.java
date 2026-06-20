@@ -44,4 +44,10 @@ public class PersonaController {
     public ResponseEntity<List<legion501st.backend.personas.Visitante>> listarVisitantes() {
         return ResponseEntity.ok(personaService.listarVisitantes());
     }
+
+    @PutMapping("/personas/{id}/toggle-habilitacion")
+    public ResponseEntity<Void> toggleHabilitacion(@PathVariable Long id) {
+        personaService.toggleHabilitado(id);
+        return ResponseEntity.noContent().build();
+    }
 }

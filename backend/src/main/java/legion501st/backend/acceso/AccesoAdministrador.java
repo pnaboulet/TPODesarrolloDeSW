@@ -14,6 +14,7 @@ public class AccesoAdministrador implements ProtocoloAcceso {
 
     @Override
     public boolean puedeIngresar(Persona persona, AutorizacionIngreso autorizacionIngreso) {
-        return persona != null && persona.getId() != null;
+        // Los administradores pueden ingresar sin restricciones horarias si están habilitados
+        return persona != null && persona.isHabilitado();
     }
 }

@@ -14,7 +14,11 @@ public class AccesoVisitante implements ProtocoloAcceso {
 
     @Override
     public boolean puedeIngresar(Persona persona, AutorizacionIngreso autorizacionIngreso) {
-        // El visitante es el único que necesita autorización previa vigente
-        return autorizacionIngreso != null && autorizacionIngreso.estaVigente();
+        // El visitante debe estar habilitado en el sistema (no estar en lista negra/suspendido)
+        // y contar con una autorización previa vigente
+        return persona != null && 
+               persona.isHabilitado() && 
+               autorizacionIngreso != null && 
+               autorizacionIngreso.estaVigente();
     }
 }

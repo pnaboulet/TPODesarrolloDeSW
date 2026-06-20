@@ -86,4 +86,15 @@ public abstract class Persona {
     public void setEmail(String email) {
         this.email = email;
     }
+
+    @Column(name = "habilitado", nullable = false)
+    private boolean habilitado = true;
+
+    public boolean isHabilitado() {
+        return habilitado;
+    }
+
+    public void setHabilitado(boolean habilitado) {
+        this.habilitado = habilitado;
+    }
 }

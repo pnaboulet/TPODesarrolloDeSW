@@ -67,4 +67,15 @@ public class UnidadFuncional {
     public void setTipoUnidad(TipoUnidad tipoUnidad) {
         this.tipoUnidad = tipoUnidad;
     }
+
+    @Column(name = "habilitada", nullable = false)
+    private boolean habilitada = true;
+
+    public boolean isHabilitada() {
+        return habilitada;
+    }
+
+    public void setHabilitada(boolean habilitada) {
+        this.habilitada = habilitada;
+    }
 }

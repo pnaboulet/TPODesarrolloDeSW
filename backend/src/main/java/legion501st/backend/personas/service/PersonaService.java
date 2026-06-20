@@ -89,6 +89,14 @@ public class PersonaService {
         return visitanteRepository.findAll();
     }
 
+    @Transactional
+    public void toggleHabilitado(Long id) {
+        Persona persona = personaRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Persona no encontrada con ID: " + id));
+        persona.setHabilitado(!persona.isHabilitado());
+        personaRepository.save(persona);
+    }
+
     private ResidenteDto mapToResidenteDto(Residente residente) {
         return new ResidenteDto(
                 residente.getId(),
@@ -96,7 +104,8 @@ public class PersonaService {
                 residente.getApellido(),
                 residente.getDni(),
                 residente.getEmail(),
-                residente.getUnidadFuncional().getId()
+                residente.getUnidadFuncional().getId(),
+                residente.isHabilitado()
         );
     }
 
@@ -120,7 +129,8 @@ public class PersonaService {
                 persona.getDni(),
                 persona.getEmail(),
                 tipo,
-                tipoServicio
+                tipoServicio,
+                persona.isHabilitado()
         );
     }
 }
