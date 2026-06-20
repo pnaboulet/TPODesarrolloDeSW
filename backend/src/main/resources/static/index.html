@@ -8,12 +8,21 @@
 </head>
 <body>
 
-    <!-- Top Navigation Bar & Simulator Role Switcher -->
     <header class="top-bar">
         <div class="logo-section">
             <h1>Barrio Cerrado</h1>
         </div>
         <div class="role-switcher-container">
+            <!-- Selector de Canal de Notificación Global -->
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-right: 1.5rem; border-right: 1px solid var(--panel-border); padding-right: 1.5rem;">
+                <span class="role-label" style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">Canal Notificación:</span>
+                <select id="active-notification-channel" class="role-select" style="min-width: 100px; padding: 0.35rem 0.75rem; font-size: 0.85rem;">
+                    <option value="email" selected>Email</option>
+                    <option value="sms">SMS</option>
+                    <option value="push">Push</option>
+                </select>
+            </div>
+            
             <span class="role-label">Simular Usuario:</span>
             <select id="role-select" class="role-select">
                 <option value="ADMINISTRADOR" selected>Administrador (Mesa de Control)</option>
@@ -126,7 +135,16 @@
                 <!-- Lista de Registros -->
                 <div class="glass-panel">
                     <h2 class="panel-title">📋 Unidades y Personas Registradas</h2>
-                    <div class="form-grid">
+                    
+                    <!-- Filtro por Barrio -->
+                    <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem; max-width: 400px;">
+                        <label for="filter-barrio-list" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Filtrar por Barrio:</label>
+                        <select id="filter-barrio-list" class="form-control" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                            <option value="ALL" selected>Todos los barrios</option>
+                        </select>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1px 1fr; gap: 2rem;">
                         <div>
                             <h3 style="margin-bottom: 0.75rem; font-size: 1rem; color: var(--text-secondary);">Unidades Funcionales</h3>
                             <div class="table-container">
@@ -136,6 +154,8 @@
                                             <th>ID</th>
                                             <th>Identificador</th>
                                             <th>Tipo</th>
+                                            <th>Barrio</th>
+                                            <th>Residentes</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -144,6 +164,10 @@
                                 </table>
                             </div>
                         </div>
+                        
+                        <!-- Línea vertical divisoria -->
+                        <div style="background: var(--panel-border); width: 1px; height: 100%;"></div>
+                        
                         <div>
                             <h3 style="margin-bottom: 0.75rem; font-size: 1rem; color: var(--text-secondary);">Personas (Residentes y Personal)</h3>
                             <div class="table-container">
@@ -153,6 +177,7 @@
                                             <th>Nombre</th>
                                             <th>DNI</th>
                                             <th>Rol/Tipo</th>
+                                            <th>Asociación (Unidad / Servicio)</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -192,14 +217,18 @@
             <!-- PANEL RESIDENTE (Developer 2 & 3 Scope)   -->
             <!-- ========================================== -->
             <section id="panel-residente" class="role-panel">
+                <div class="glass-panel" style="padding: 1.25rem 2rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid var(--primary-color);">
+                    <span style="font-weight: 600; color: var(--text-secondary);">👤 Actuando como Residente:</span>
+                    <select id="active-residente-select" class="role-select" style="min-width: 280px;"></select>
+                </div>
+
                 <div class="glass-panel">
                     <h2 class="panel-title">✍️ Crear Reclamo o Solicitud</h2>
                     <form id="form-reclamo">
                         <div class="form-grid">
-                            <div class="form-group">
+                            <div class="form-group" style="display: none;">
                                 <label for="reclamo-residente">¿Quién reclama? (Residente)</label>
                                 <select id="reclamo-residente" class="form-control" required>
-                                    <option value="" disabled selected>Seleccione un residente...</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -253,10 +282,9 @@
                     <h2 class="panel-title">🔑 Autorizar Ingreso de Visitante</h2>
                     <form id="form-autorizar">
                         <div class="form-grid">
-                            <div class="form-group">
+                            <div class="form-group" style="display: none;">
                                 <label for="aut-residente">Residente Autorizante</label>
                                 <select id="aut-residente" class="form-control" required>
-                                    <option value="" disabled selected>Seleccione un residente...</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -271,9 +299,10 @@
                                 <label for="aut-desde">Fecha/Hora Desde</label>
                                 <input type="datetime-local" id="aut-desde" class="form-control" required>
                             </div>
-                            <div class="form-group">
+                            <!-- La fecha hasta se calcula automáticamente (24 hs) para simplificar la UI -->
+                            <div class="form-group" style="display: none;">
                                 <label for="aut-hasta">Fecha/Hora Hasta</label>
-                                <input type="datetime-local" id="aut-hasta" class="form-control" required>
+                                <input type="datetime-local" id="aut-hasta" class="form-control">
                             </div>
                         </div>
                         <button type="submit" class="btn btn-success">Generar Autorización</button>
@@ -285,19 +314,29 @@
             <!-- PANEL GUARDIA / PORTERÍA (Developer 2)     -->
             <!-- ========================================== -->
             <section id="panel-guardia" class="role-panel">
+                <div class="glass-panel" style="padding: 1.25rem 2rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid var(--primary-color);">
+                    <span style="font-weight: 600; color: var(--text-secondary);">🛡️ Actuando como Guardia de Seguridad:</span>
+                    <select id="active-guardia-select" class="role-select" style="min-width: 280px;"></select>
+                </div>
+
                 <div class="glass-panel">
-                    <h2 class="panel-title">🛡️ Portería: Registrar Ingreso de Visitante</h2>
+                    <h2 class="panel-title">🛡️ Portería: Registrar Ingreso (Residentes, Proveedores, Visitas)</h2>
                     <form id="form-checkin">
                         <div class="form-grid">
-                            <div class="form-group">
+                            <div class="form-group" style="display: none;">
                                 <label for="checkin-seguridad">Guardia de Turno</label>
                                 <select id="checkin-seguridad" class="form-control" required>
-                                    <option value="" disabled selected>Seleccione guardia...</option>
                                 </select>
                             </div>
                             <div class="form-group">
+                                <label for="checkin-persona-select">Persona que ingresa (Estrategia)</label>
+                                <select id="checkin-persona-select" class="form-control" required>
+                                    <option value="" disabled selected>Seleccione una persona...</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="display: none;">
                                 <label for="checkin-visitante-dni">DNI del Visitante</label>
-                                <input type="text" id="checkin-visitante-dni" class="form-control" placeholder="DNI presentado en portería" inputmode="numeric" maxlength="8" pattern="[0-9]{8}" title="El DNI debe tener exactamente 8 números" required>
+                                <input type="text" id="checkin-visitante-dni" class="form-control" required>
                             </div>
                         </div>
                         <button type="submit" class="btn btn-primary">Verificar & Registrar Entrada (Strategy)</button>
@@ -329,12 +368,16 @@
             <!-- PANEL PROVEEDOR / MANTENIMIENTO (Dev 3)   -->
             <!-- ========================================== -->
             <section id="panel-proveedor" class="role-panel">
+                <div class="glass-panel" style="padding: 1.25rem 2rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid var(--primary-color);">
+                    <span style="font-weight: 600; color: var(--text-secondary);">🔧 Actuando como Operario / Proveedor:</span>
+                    <select id="active-proveedor-select" class="role-select" style="min-width: 280px;"></select>
+                </div>
+
                 <div class="glass-panel">
                     <h2 class="panel-title">🔧 Tareas Asignadas de Mantenimiento</h2>
-                    <div class="form-group" style="margin-bottom: 1.5rem; max-width: 300px;">
+                    <div class="form-group" style="display: none;">
                         <label for="proveedor-filtro">Seleccionar Operario / Proveedor</label>
                         <select id="proveedor-filtro" class="form-control">
-                            <option value="" disabled selected>Seleccione operario...</option>
                         </select>
                     </div>
                     

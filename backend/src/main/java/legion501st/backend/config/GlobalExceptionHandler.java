@@ -43,6 +43,22 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, String>> handleDataIntegrityViolationException(
+            org.springframework.dao.DataIntegrityViolationException ex) {
+        Map<String, String> response = new HashMap<>();
+        response.put("error", "Conflicto de datos");
+        String message = ex.getRootCause() != null ? ex.getRootCause().getMessage() : ex.getMessage();
+        if (message != null && (message.contains("personas_dni_key") || message.contains("Key (dni)="))) {
+            response.put("mensaje", "El DNI ingresado ya se encuentra registrado para otra persona.");
+        } else if (message != null && message.contains("personas_email_key")) {
+            response.put("mensaje", "El email ingresado ya se encuentra registrado para otra persona.");
+        } else {
+            response.put("mensaje", "Error de integridad de datos: " + message);
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGeneralException(Exception ex) {
         Map<String, String> response = new HashMap<>();

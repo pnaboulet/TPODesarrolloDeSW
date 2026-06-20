@@ -39,4 +39,9 @@ public class PersonaController {
     public ResponseEntity<List<PersonalDto>> listarPersonal() {
         return ResponseEntity.ok(personaService.listarPersonal());
     }
+
+    @GetMapping("/visitantes")
+    public ResponseEntity<List<legion501st.backend.personas.Visitante>> listarVisitantes() {
+        return ResponseEntity.ok(personaService.listarVisitantes());
+    }
 }

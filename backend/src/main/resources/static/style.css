@@ -344,6 +344,7 @@ body {
 
 .console-entry.sms { border-left-color: var(--secondary-color); color: #22d3ee; }
 .console-entry.push { border-left-color: var(--success-color); color: #34d399; }
+.console-entry.email { border-left-color: var(--primary-color); color: #e879f9; }
 .console-entry.system { border-left-color: var(--text-muted); color: var(--text-secondary); }
 
 .console-time {

@@ -24,6 +24,7 @@ public class PersonaService {
     private final PersonalMantenimientoRepository mantenimientoRepository;
     private final ProveedorRepository proveedorRepository;
     private final UnidadFuncionalRepository unidadFuncionalRepository;
+    private final VisitanteRepository visitanteRepository;
     private final PersonaFactory personaFactory;
 
     public PersonaService(PersonaRepository personaRepository,
@@ -32,6 +33,7 @@ public class PersonaService {
                           PersonalMantenimientoRepository mantenimientoRepository,
                           ProveedorRepository proveedorRepository,
                           UnidadFuncionalRepository unidadFuncionalRepository,
+                          VisitanteRepository visitanteRepository,
                           PersonaFactory personaFactory) {
         this.personaRepository = personaRepository;
         this.residenteRepository = residenteRepository;
@@ -39,6 +41,7 @@ public class PersonaService {
         this.mantenimientoRepository = mantenimientoRepository;
         this.proveedorRepository = proveedorRepository;
         this.unidadFuncionalRepository = unidadFuncionalRepository;
+        this.visitanteRepository = visitanteRepository;
         this.personaFactory = personaFactory;
     }
 
@@ -80,6 +83,10 @@ public class PersonaService {
                 .filter(p -> !(p instanceof Residente) && !(p instanceof Visitante))
                 .map(this::mapToPersonalDto)
                 .collect(Collectors.toList());
+    }
+
+    public List<Visitante> listarVisitantes() {
+        return visitanteRepository.findAll();
     }
 
     private ResidenteDto mapToResidenteDto(Residente residente) {

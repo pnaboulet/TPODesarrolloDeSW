@@ -64,8 +64,8 @@ public class AccesoService {
     public Visita registrarIngresoVisitante(String visitanteDni, Long seguridadId) {
         validarDni(visitanteDni);
 
-        Visitante visitante = visitanteRepository.findByDni(visitanteDni.trim())
-                .orElseThrow(() -> new IllegalArgumentException("No existe un visitante con ese DNI"));
+        Persona visitante = personaRepository.findByDni(visitanteDni.trim())
+                .orElseThrow(() -> new IllegalArgumentException("No existe una persona registrada con ese DNI"));
 
         return registrarIngresoVisitante(visitante.getId(), seguridadId);
     }
@@ -76,6 +76,14 @@ public class AccesoService {
 
         if (!(seguridad instanceof PersonalSeguridad)) {
             throw new IllegalArgumentException("El ingreso debe registrarlo personal de seguridad");
+        }
+
+        // Verificar si ya se encuentra adentro del barrio
+        boolean yaEstaAdentro = visitaRepository
+                .findFirstByVisitanteIdAndEstadoOrderByFechaIngresoDesc(visitanteId, EstadoVisita.EN_CURSO)
+                .isPresent();
+        if (yaEstaAdentro) {
+            throw new IllegalArgumentException("La persona ya se encuentra dentro del barrio (tiene un ingreso activo)");
         }
 
         LocalDateTime ahora = LocalDateTime.now();
