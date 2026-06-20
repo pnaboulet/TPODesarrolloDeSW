@@ -14,11 +14,12 @@ public class VisitaResponse {
     private LocalDateTime fechaIngreso;
     private LocalDateTime fechaSalida;
     private EstadoVisita estado;
+    private Long barrioId;
 
     public VisitaResponse() {
     }
 
-    public VisitaResponse(Long id, Long visitanteId, String nombreVisitante, String dniVisitante, LocalDateTime fechaIngreso, LocalDateTime fechaSalida, EstadoVisita estado) {
+    public VisitaResponse(Long id, Long visitanteId, String nombreVisitante, String dniVisitante, LocalDateTime fechaIngreso, LocalDateTime fechaSalida, EstadoVisita estado, Long barrioId) {
         this.id = id;
         this.visitanteId = visitanteId;
         this.nombreVisitante = nombreVisitante;
@@ -26,6 +27,7 @@ public class VisitaResponse {
         this.fechaIngreso = fechaIngreso;
         this.fechaSalida = fechaSalida;
         this.estado = estado;
+        this.barrioId = barrioId;
     }
 
     public static VisitaResponse desdeEntidad(Visita visita) {
@@ -33,6 +35,8 @@ public class VisitaResponse {
         Long visitanteId = visita.getVisitante() != null ? visita.getVisitante().getId() : null;
         String nombre = visita.getVisitante() != null ? visita.getVisitante().getNombre() : null;
         String dni = visita.getVisitante() != null ? visita.getVisitante().getDni() : null;
+        Long barrioId = (visita.getRegistradoPor() != null && visita.getRegistradoPor().getBarrio() != null) ? 
+                visita.getRegistradoPor().getBarrio().getId() : null;
 
         return new VisitaResponse(
                 visita.getId(),
@@ -41,7 +45,8 @@ public class VisitaResponse {
                 dni,
                 visita.getFechaIngreso(),
                 visita.getFechaSalida(),
-                visita.getEstado()
+                visita.getEstado(),
+                barrioId
         );
     }
 
@@ -99,5 +104,13 @@ public class VisitaResponse {
 
     public void setEstado(EstadoVisita estado) {
         this.estado = estado;
+    }
+
+    public Long getBarrioId() {
+        return barrioId;
+    }
+
+    public void setBarrioId(Long barrioId) {
+        this.barrioId = barrioId;
     }
 }

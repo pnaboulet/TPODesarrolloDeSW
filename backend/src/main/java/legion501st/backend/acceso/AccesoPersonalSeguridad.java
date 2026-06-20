@@ -14,7 +14,12 @@ public class AccesoPersonalSeguridad implements ProtocoloAcceso {
 
     @Override
     public boolean puedeIngresar(Persona persona, AutorizacionIngreso autorizacionIngreso) {
-        // El personal de seguridad puede ingresar las 24 horas del día siempre y cuando esté habilitado
-        return persona != null && persona.isHabilitado();
+        if (persona == null) {
+            throw new IllegalArgumentException("Persona no encontrada");
+        }
+        if (!persona.isHabilitado()) {
+            throw new IllegalArgumentException("El personal de seguridad se encuentra deshabilitado/bloqueado");
+        }
+        return true;
     }
 }

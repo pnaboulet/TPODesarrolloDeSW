@@ -4,5 +4,5 @@ public enum TipoReclamo {
     MANTENIMIENTO,
     ADMINISTRATIVO,
     SEGURIDAD,
-    OTRO
+    SUMINISTROS
 }

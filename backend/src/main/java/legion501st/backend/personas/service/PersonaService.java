@@ -1,7 +1,9 @@
 package legion501st.backend.personas.service;
 
 import legion501st.backend.barrio.UnidadFuncional;
+import legion501st.backend.barrio.Barrio;
 import legion501st.backend.barrio.repository.UnidadFuncionalRepository;
+import legion501st.backend.barrio.repository.BarrioRepository;
 import legion501st.backend.personas.*;
 import legion501st.backend.personas.dto.PersonalDto;
 import legion501st.backend.personas.dto.ResidenteDto;
@@ -26,6 +28,7 @@ public class PersonaService {
     private final UnidadFuncionalRepository unidadFuncionalRepository;
     private final VisitanteRepository visitanteRepository;
     private final PersonaFactory personaFactory;
+    private final BarrioRepository barrioRepository;
 
     public PersonaService(PersonaRepository personaRepository,
                           ResidenteRepository residenteRepository,
@@ -34,7 +37,8 @@ public class PersonaService {
                           ProveedorRepository proveedorRepository,
                           UnidadFuncionalRepository unidadFuncionalRepository,
                           VisitanteRepository visitanteRepository,
-                          PersonaFactory personaFactory) {
+                          PersonaFactory personaFactory,
+                          BarrioRepository barrioRepository) {
         this.personaRepository = personaRepository;
         this.residenteRepository = residenteRepository;
         this.seguridadRepository = seguridadRepository;
@@ -43,6 +47,7 @@ public class PersonaService {
         this.unidadFuncionalRepository = unidadFuncionalRepository;
         this.visitanteRepository = visitanteRepository;
         this.personaFactory = personaFactory;
+        this.barrioRepository = barrioRepository;
     }
 
     @Transactional
@@ -66,6 +71,11 @@ public class PersonaService {
         }
 
         Persona persona = personaFactory.crearPersona(dto.tipo(), dto.nombre(), dto.apellido(), dto.dni(), dto.email(), attrs);
+        if (dto.barrioId() != null) {
+            Barrio barrio = barrioRepository.findById(dto.barrioId())
+                    .orElseThrow(() -> new IllegalArgumentException("Barrio no encontrado con ID: " + dto.barrioId()));
+            persona.setBarrio(barrio);
+        }
         persona = personaRepository.save(persona);
 
         return mapToPersonalDto(persona);
@@ -93,6 +103,9 @@ public class PersonaService {
     public void toggleHabilitado(Long id) {
         Persona persona = personaRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Persona no encontrada con ID: " + id));
+        if (!(persona instanceof Residente)) {
+            throw new IllegalArgumentException("Solo los residentes se pueden deshabilitar/habilitar");
+        }
         persona.setHabilitado(!persona.isHabilitado());
         personaRepository.save(persona);
     }
@@ -121,6 +134,8 @@ public class PersonaService {
         };
 
         String tipoServicio = (persona instanceof Proveedor p) ? p.getTipoServicio() : null;
+        Long barrioId = persona.getBarrio() != null ? persona.getBarrio().getId() : null;
+        String barrioNombre = persona.getBarrio() != null ? persona.getBarrio().getNombre() : null;
 
         return new PersonalDto(
                 persona.getId(),
@@ -130,7 +145,9 @@ public class PersonaService {
                 persona.getEmail(),
                 tipo,
                 tipoServicio,
-                persona.isHabilitado()
+                persona.isHabilitado(),
+                barrioId,
+                barrioNombre
         );
     }
 }

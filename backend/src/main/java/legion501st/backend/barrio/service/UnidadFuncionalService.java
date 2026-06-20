@@ -17,10 +17,12 @@ public class UnidadFuncionalService {
 
     private final UnidadFuncionalRepository repository;
     private final BarrioRepository barrioRepository;
+    private final legion501st.backend.personas.repository.ResidenteRepository residenteRepository;
 
-    public UnidadFuncionalService(UnidadFuncionalRepository repository, BarrioRepository barrioRepository) {
+    public UnidadFuncionalService(UnidadFuncionalRepository repository, BarrioRepository barrioRepository, legion501st.backend.personas.repository.ResidenteRepository residenteRepository) {
         this.repository = repository;
         this.barrioRepository = barrioRepository;
+        this.residenteRepository = residenteRepository;
     }
 
     @Transactional
@@ -39,8 +41,17 @@ public class UnidadFuncionalService {
     public UnidadFuncionalDto toggleHabilitada(Long id) {
         UnidadFuncional uf = repository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Unidad funcional no encontrada con ID: " + id));
-        uf.setHabilitada(!uf.isHabilitada());
+        boolean nuevaHabilitada = !uf.isHabilitada();
+        uf.setHabilitada(nuevaHabilitada);
         uf = repository.save(uf);
+
+        // Actualizar el habilitado individual de los residentes de esa unidad
+        List<legion501st.backend.personas.Residente> residentes = residenteRepository.findByUnidadFuncionalId(uf.getId());
+        for (legion501st.backend.personas.Residente residente : residentes) {
+            residente.setHabilitado(nuevaHabilitada);
+            residenteRepository.save(residente);
+        }
+
         return mapToDto(uf);
     }
 

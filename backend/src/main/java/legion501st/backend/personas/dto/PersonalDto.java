@@ -33,5 +33,9 @@ public record PersonalDto(
 
     String tipoServicio, // Solo aplicable si es PROVEEDOR
 
-    Boolean habilitado
+    Boolean habilitado,
+
+    Long barrioId,
+
+    String barrioNombre
 ) {}

@@ -10,6 +10,8 @@ import legion501st.backend.personas.Persona;
 import legion501st.backend.personas.PersonalSeguridad;
 import legion501st.backend.personas.Residente;
 import legion501st.backend.personas.Visitante;
+import legion501st.backend.personas.PersonalMantenimiento;
+import legion501st.backend.personas.Proveedor;
 import legion501st.backend.personas.repository.PersonaRepository;
 import legion501st.backend.personas.repository.VisitanteRepository;
 import org.springframework.stereotype.Service;
@@ -77,6 +79,33 @@ public class AccesoService {
         if (!(seguridad instanceof PersonalSeguridad)) {
             throw new IllegalArgumentException("El ingreso debe registrarlo personal de seguridad");
         }
+        PersonalSeguridad seg = (PersonalSeguridad) seguridad;
+
+        // Verificar que pertenezcan al mismo barrio si no es un visitante global
+        if (seg.getBarrio() == null) {
+            throw new IllegalArgumentException("El guardia de seguridad debe estar asignado a un barrio para registrar ingresos");
+        }
+        Long guardBarrioId = seg.getBarrio().getId();
+        
+        if (visitante instanceof Residente residente) {
+            if (residente.getUnidadFuncional() != null && residente.getUnidadFuncional().getBarrio() != null) {
+                if (!residente.getUnidadFuncional().getBarrio().getId().equals(guardBarrioId)) {
+                    throw new IllegalArgumentException("El residente no pertenece a este barrio");
+                }
+            }
+        } else if (visitante instanceof PersonalSeguridad personalSeg) {
+            if (personalSeg.getBarrio() != null && !personalSeg.getBarrio().getId().equals(guardBarrioId)) {
+                throw new IllegalArgumentException("El personal de seguridad no pertenece a este barrio");
+            }
+        } else if (visitante instanceof PersonalMantenimiento personalMant) {
+            if (personalMant.getBarrio() != null && !personalMant.getBarrio().getId().equals(guardBarrioId)) {
+                throw new IllegalArgumentException("El personal de mantenimiento no pertenece a este barrio");
+            }
+        } else if (visitante instanceof Proveedor proveedor) {
+            if (proveedor.getBarrio() != null && !proveedor.getBarrio().getId().equals(guardBarrioId)) {
+                throw new IllegalArgumentException("El proveedor no pertenece a este barrio");
+            }
+        }
 
         // Verificar si ya se encuentra adentro del barrio
         boolean yaEstaAdentro = visitaRepository
@@ -90,12 +119,21 @@ public class AccesoService {
 
         AutorizacionIngreso autorizacion = null;
         if (visitante instanceof Visitante) {
-            autorizacion = autorizacionRepository
-                    .findFirstByVisitanteIdAndUtilizadaFalseAndFechaDesdeLessThanEqualAndFechaHastaGreaterThanEqualOrderByFechaHastaAsc(
-                            visitanteId,
-                            ahora,
-                            ahora
-                    )
+            List<AutorizacionIngreso> auts = autorizacionRepository.findByVisitanteIdAndUtilizadaFalse(visitanteId);
+            autorizacion = auts.stream()
+                    .filter(a -> a.getFechaDesde() != null && a.getFechaHasta() != null 
+                              && !ahora.isBefore(a.getFechaDesde()) && !ahora.isAfter(a.getFechaHasta()))
+                    .filter(a -> {
+                        if (a.getResidenteAutoriza() == null || a.getResidenteAutoriza().getUnidadFuncional() == null 
+                                || a.getResidenteAutoriza().getUnidadFuncional().getBarrio() == null) {
+                            return false;
+                        }
+                        if (seg.getBarrio() == null) {
+                            return false;
+                        }
+                        return a.getResidenteAutoriza().getUnidadFuncional().getBarrio().getId().equals(seg.getBarrio().getId());
+                    })
+                    .findFirst()
                     .orElse(null);
         }
 
@@ -134,6 +172,24 @@ public class AccesoService {
         return visitaRepository.findAll();
     }
 
+    public List<AutorizacionIngreso> listarAutorizaciones() {
+        return autorizacionRepository.findAll();
+    }
+
+    public List<AutorizacionIngreso> listarAutorizacionesPorResidente(Long residenteId) {
+        return autorizacionRepository.findByResidenteAutorizaId(residenteId);
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void revocarAutorizacion(Long id) {
+        AutorizacionIngreso aut = autorizacionRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Autorización no encontrada con ID: " + id));
+        if (aut.isUtilizada()) {
+            throw new IllegalArgumentException("No se puede revocar una autorización que ya ha sido utilizada");
+        }
+        autorizacionRepository.delete(aut);
+    }
+
     private Visitante buscarOCrearVisitante(String nombre, String dni) {
         String dniLimpio = dni.trim();
 
@@ -167,6 +223,9 @@ public class AccesoService {
     private void validarRangoFechas(LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
         if (fechaDesde == null || fechaHasta == null || !fechaHasta.isAfter(fechaDesde)) {
             throw new IllegalArgumentException("La fecha de fin debe ser posterior a la fecha de inicio");
+        }
+        if (fechaDesde.isBefore(LocalDateTime.now().minusMinutes(5))) {
+            throw new IllegalArgumentException("No se puede autorizar un ingreso con fecha o rango de horario del pasado");
         }
     }
 

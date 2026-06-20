@@ -42,6 +42,13 @@ public class TareaService {
         Persona responsable = personaRepository.findById(dto.responsableId())
                 .orElseThrow(() -> new IllegalArgumentException("Responsable no encontrado con ID: " + dto.responsableId()));
 
+        if (responsable instanceof legion501st.backend.personas.Proveedor) {
+            throw new IllegalArgumentException("No se puede asignar una tarea de mantenimiento a un proveedor");
+        }
+        if (!(responsable instanceof legion501st.backend.personas.PersonalMantenimiento)) {
+            throw new IllegalArgumentException("Una tarea de mantenimiento solo puede ser asignada a personal de mantenimiento");
+        }
+
         TareaMantenimiento tarea = TareaMantenimiento.builder()
                 .reclamo(reclamo)
                 .descripcion(dto.descripcion())

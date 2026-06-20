@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import legion501st.backend.barrio.Barrio;
 
 @Entity
 @Table(name = "personas")
@@ -96,5 +97,17 @@ public abstract class Persona {
 
     public void setHabilitado(boolean habilitado) {
         this.habilitado = habilitado;
+    }
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "barrio_id")
+    private Barrio barrio;
+
+    public Barrio getBarrio() {
+        return barrio;
+    }
+
+    public void setBarrio(Barrio barrio) {
+        this.barrio = barrio;
     }
 }

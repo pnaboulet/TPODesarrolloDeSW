@@ -2,6 +2,9 @@ package legion501st.backend.reclamo.service;
 
 import legion501st.backend.personas.Persona;
 import legion501st.backend.personas.Residente;
+import legion501st.backend.personas.PersonalMantenimiento;
+import legion501st.backend.personas.PersonalSeguridad;
+import legion501st.backend.personas.Proveedor;
 import legion501st.backend.personas.repository.PersonaRepository;
 import legion501st.backend.reclamo.EstadoReclamo;
 import legion501st.backend.reclamo.HistorialEstado;
@@ -79,6 +82,26 @@ public class ReclamoService {
 
         Persona responsable = personaRepository.findById(responsableId)
                 .orElseThrow(() -> new IllegalArgumentException("Responsable no encontrado con ID: " + responsableId));
+
+        // Validar tipo de reclamo y tipo de responsable
+        if (reclamo.getTipoReclamo() == legion501st.backend.reclamo.TipoReclamo.MANTENIMIENTO && !(responsable instanceof PersonalMantenimiento)) {
+            throw new IllegalArgumentException("Un reclamo de mantenimiento solo puede ser asignado a personal de mantenimiento");
+        }
+        if (reclamo.getTipoReclamo() == legion501st.backend.reclamo.TipoReclamo.SUMINISTROS && !(responsable instanceof Proveedor)) {
+            throw new IllegalArgumentException("Un reclamo de suministros solo puede ser asignado a un proveedor");
+        }
+        if (reclamo.getTipoReclamo() == legion501st.backend.reclamo.TipoReclamo.SEGURIDAD && !(responsable instanceof PersonalSeguridad)) {
+            throw new IllegalArgumentException("Un reclamo de seguridad solo puede ser asignado a personal de seguridad");
+        }
+
+        // Verificar que pertenezcan al mismo barrio si el responsable tiene barrio asignado
+        if (reclamo.getResidente().getUnidadFuncional() != null && reclamo.getResidente().getUnidadFuncional().getBarrio() != null) {
+            Long residentBarrioId = reclamo.getResidente().getUnidadFuncional().getBarrio().getId();
+            Long responsibleBarrioId = responsable.getBarrio() != null ? responsable.getBarrio().getId() : null;
+            if (responsibleBarrioId != null && !responsibleBarrioId.equals(residentBarrioId)) {
+                throw new IllegalArgumentException("El responsable asignado pertenece a otro barrio");
+            }
+        }
 
         EstadoReclamo estadoAnterior = reclamo.getEstado();
 
@@ -179,6 +202,13 @@ public class ReclamoService {
         String responsableNombre = reclamo.getResponsable() != null ?
                 reclamo.getResponsable().getNombre() + " " + reclamo.getResponsable().getApellido() : null;
 
+        String barrioNombre = null;
+        if (reclamo.getResidente() != null && 
+            reclamo.getResidente().getUnidadFuncional() != null && 
+            reclamo.getResidente().getUnidadFuncional().getBarrio() != null) {
+            barrioNombre = reclamo.getResidente().getUnidadFuncional().getBarrio().getNombre();
+        }
+
         return ReclamoDto.builder()
                 .id(reclamo.getId())
                 .residenteId(reclamo.getResidente().getId())
@@ -190,6 +220,7 @@ public class ReclamoService {
                 .fechaCreacion(reclamo.getFechaCreacion())
                 .responsableId(responsableId)
                 .responsableNombreCompleto(responsableNombre)
+                .barrioNombre(barrioNombre)
                 .build();
     }
 

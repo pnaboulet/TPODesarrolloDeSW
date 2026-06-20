@@ -19,5 +19,6 @@ public record ReclamoDto(
     EstadoReclamo estado,
     LocalDateTime fechaCreacion,
     Long responsableId,
-    String responsableNombreCompleto
+    String responsableNombreCompleto,
+    String barrioNombre
 ) {}

@@ -17,8 +17,12 @@ public class AccesoResidente implements ProtocoloAcceso {
         if (!(persona instanceof Residente residente)) {
             return false;
         }
-        // El residente debe estar habilitado y su unidad funcional (si tiene una asignada) también debe estar habilitada
-        return residente.isHabilitado() && 
-               (residente.getUnidadFuncional() == null || residente.getUnidadFuncional().isHabilitada());
+        if (!residente.isHabilitado()) {
+            throw new IllegalArgumentException("El residente se encuentra deshabilitado/bloqueado");
+        }
+        if (residente.getUnidadFuncional() != null && !residente.getUnidadFuncional().isHabilitada()) {
+            throw new IllegalArgumentException("La unidad funcional del residente se encuentra suspendida o deshabilitada");
+        }
+        return true;
     }
 }

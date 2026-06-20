@@ -403,3 +403,46 @@ body {
         transform: translateX(0);
     }
 }
+
+/* Responsive Grid & Tables Adjustments */
+.admin-split-grid {
+    display: grid;
+    grid-template-columns: 1fr 1px 1fr;
+    gap: 2rem;
+}
+
+@media (max-width: 1024px) {
+    .admin-split-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    .admin-split-grid > div:nth-child(2) {
+        display: none; /* Hide vertical line divider */
+    }
+}
+
+@media (max-width: 768px) {
+    .custom-table th, .custom-table td {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+    .top-bar {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+        align-items: center;
+    }
+
+    .role-switcher-container {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.75rem;
+    }
+    
+    .role-switcher-container > div {
+        border-right: none !important;
+        padding-right: 0 !important;
+        margin-right: 0 !important;
+    }
+}

@@ -12,16 +12,13 @@ import legion501st.backend.facade.GestionBarrioFacade;
 import legion501st.backend.acceso.service.AccesoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api")
+@org.springframework.transaction.annotation.Transactional
 public class AccesoController {
 
     private final AccesoService accesoService;
@@ -47,6 +44,26 @@ public class AccesoController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(AutorizacionResponse.desdeEntidad(autorizacion));
+    }
+
+    @GetMapping("/autorizaciones")
+    public ResponseEntity<List<AutorizacionResponse>> listarAutorizaciones(@RequestParam(required = false) Long residenteId) {
+        List<AutorizacionIngreso> auts;
+        if (residenteId != null) {
+            auts = accesoService.listarAutorizacionesPorResidente(residenteId);
+        } else {
+            auts = accesoService.listarAutorizaciones();
+        }
+        List<AutorizacionResponse> response = auts.stream()
+                .map(AutorizacionResponse::desdeEntidad)
+                .toList();
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/autorizaciones/{id}")
+    public ResponseEntity<Void> revocarAutorizacion(@PathVariable Long id) {
+        accesoService.revocarAutorizacion(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/visitas/ingreso")

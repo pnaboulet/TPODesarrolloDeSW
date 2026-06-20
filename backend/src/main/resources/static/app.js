@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let personas = [];
     let reclamos = [];
     let visitasActivas = [];
+    let autorizaciones = [];
 
     // --- DOM ELEMENTS ---
     const roleSelect = document.getElementById("role-select");
@@ -19,15 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- SYSTEM CONSOLE LOGGING ---
     const consoleLog = document.getElementById("notification-console");
 
-    function logSystem(message, type = "system") {
-        // Enrutar todas las notificaciones al canal global seleccionado
-        if (type === "email" || type === "sms" || type === "push") {
-            const activeChannel = document.getElementById("active-notification-channel").value;
-            // Reemplazar la etiqueta inicial [Email Notification], [Push Notification], etc. con el formato del canal activo
-            message = message.replace(/^\[(Email|SMS|Push)\s+Notification\]/i, `[${activeChannel.toUpperCase()} Notification]`);
-            type = activeChannel;
-        }
-
+    function printToConsole(message, type) {
         const time = new Date().toLocaleTimeString();
         const entry = document.createElement("div");
         entry.className = `console-entry ${type}`;
@@ -43,6 +36,30 @@ document.addEventListener("DOMContentLoaded", () => {
         entry.appendChild(textSpan);
         consoleLog.appendChild(entry);
         consoleLog.scrollTop = consoleLog.scrollHeight;
+    }
+
+    function logSystem(message, type = "system") {
+        if (type === "email" || type === "sms" || type === "push") {
+            // Strip initial prefix like [Email Notification] etc.
+            const cleanMessage = message.replace(/^\[(?:Email|SMS|Push)\s+Notification\]\s*/i, "");
+            
+            const emailChecked = document.getElementById("notif-email")?.checked;
+            const smsChecked = document.getElementById("notif-sms")?.checked;
+            const pushChecked = document.getElementById("notif-push")?.checked;
+            
+            if (emailChecked) {
+                printToConsole(`[EMAIL Notification] ${cleanMessage}`, "email");
+            }
+            if (smsChecked) {
+                printToConsole(`[SMS Notification] ${cleanMessage}`, "sms");
+            }
+            if (pushChecked) {
+                printToConsole(`[PUSH Notification] ${cleanMessage}`, "push");
+            }
+            return;
+        }
+
+        printToConsole(message, type);
     }
 
     // --- TOAST NOTIFICATIONS ---
@@ -172,6 +189,13 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("Error al obtener visitas activas para filtro:", e);
         }
 
+        // Obtener autorizaciones de forma global
+        try {
+            autorizaciones = await apiRequest("/api/autorizaciones") || [];
+        } catch (e) {
+            console.error("Error al obtener autorizaciones:", e);
+        }
+
         // Rellenar selector de filtro de barrios en Admin si está vacío
         actualizarSelectFiltroBarrios();
 
@@ -208,6 +232,19 @@ document.addEventListener("DOMContentLoaded", () => {
         renderTablaPersonas();
     });
 
+    const globalBarrioSelect = document.getElementById("global-barrio-select");
+    if (globalBarrioSelect) {
+        globalBarrioSelect.addEventListener("change", () => {
+            const val = globalBarrioSelect.value;
+            if (filterBarrioSelect) {
+                filterBarrioSelect.value = val;
+                filterBarrioSelect.dispatchEvent(new Event("change"));
+            }
+            inicializarSelectoresContexto();
+            renderTablaVisitasActivas();
+        });
+    }
+
     // Cargar Barrios para el formulario
     async function cargarBarrios() {
         try {
@@ -220,6 +257,30 @@ document.addEventListener("DOMContentLoaded", () => {
                 opt.textContent = b.nombre;
                 selectUnidad.appendChild(opt);
             });
+
+            const selectPersonalBarrio = document.getElementById("persona-barrio");
+            if (selectPersonalBarrio) {
+                selectPersonalBarrio.innerHTML = '<option value="" disabled selected>Seleccione barrio...</option>';
+                barrios.forEach(b => {
+                    const opt = document.createElement("option");
+                    opt.value = b.id;
+                    opt.textContent = b.nombre;
+                    selectPersonalBarrio.appendChild(opt);
+                });
+            }
+
+            const globalBarrioSelect = document.getElementById("global-barrio-select");
+            if (globalBarrioSelect) {
+                const prevGlobalVal = globalBarrioSelect.value || "ALL";
+                globalBarrioSelect.innerHTML = '<option value="ALL">Todos</option>';
+                barrios.forEach(b => {
+                    const opt = document.createElement("option");
+                    opt.value = b.id;
+                    opt.textContent = b.nombre;
+                    globalBarrioSelect.appendChild(opt);
+                });
+                globalBarrioSelect.value = prevGlobalVal;
+            }
             actualizarSelectFiltroBarrios();
         } catch (e) {}
     }
@@ -305,13 +366,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Dividir entre residentes del barrio y personal general
         const residentes = personas.filter(p => p.tipo === "RESIDENTE");
-        const personalGeneral = personas.filter(p => p.tipo !== "RESIDENTE");
+        const personalGeneral = personas.filter(p => p.tipo !== "RESIDENTE" && p.tipo !== "VISITANTE" && p.tipo !== "ADMINISTRADOR");
 
         // Filtrar residentes según el barrio de su unidad funcional
         const residentesFiltrados = residentes.filter(p => {
             if (selectedBarrioId === "ALL") return true;
             const uf = unidades.find(u => u.id === p.unidadFuncionalId);
             return uf && uf.barrioId == selectedBarrioId;
+        });
+
+        // Filtrar personal general según el barrio asignado
+        const personalGeneralFiltrado = personalGeneral.filter(p => {
+            if (selectedBarrioId === "ALL") return true;
+            return p.barrioId == selectedBarrioId;
         });
 
         // 1. Mostrar Residentes Filtrados
@@ -339,7 +406,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         // 2. Mostrar Personal General (separados o en su propio grupo)
-        if (personalGeneral.length > 0) {
+        if (personalGeneralFiltrado.length > 0) {
             // Añadir fila divisoria en la tabla para mejor claridad
             const rowHeader = document.createElement("tr");
             rowHeader.innerHTML = `
@@ -349,17 +416,18 @@ document.addEventListener("DOMContentLoaded", () => {
             `;
             tbody.appendChild(rowHeader);
 
-            personalGeneral.forEach(p => {
+            personalGeneralFiltrado.forEach(p => {
                 const tr = document.createElement("tr");
                 let asociacion = "";
+                let barrioNombre = p.barrioNombre ? ` (${p.barrioNombre})` : " (Sin barrio)";
                 if (p.tipo === "PROVEEDOR") {
-                    asociacion = p.tipoServicio ? `Proveedor Externo: ${p.tipoServicio}` : "Proveedor Externo";
+                    asociacion = (p.tipoServicio ? `Proveedor Externo: ${p.tipoServicio}` : "Proveedor Externo") + barrioNombre;
                 } else if (p.tipo === "MANTENIMIENTO") {
-                    asociacion = "Mantenimiento Interno";
+                    asociacion = "Mantenimiento Interno" + barrioNombre;
                 } else if (p.tipo === "SEGURIDAD") {
-                    asociacion = "Seguridad / Portería";
+                    asociacion = "Seguridad / Portería" + barrioNombre;
                 } else {
-                    asociacion = "Administración";
+                    asociacion = "Administración" + barrioNombre;
                 }
                 
                 const btnClass = p.habilitado ? "badge-success" : "badge-danger";
@@ -371,9 +439,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     <td><span class="badge badge-process">${p.tipo}</span></td>
                     <td>${asociacion}</td>
                     <td>
-                        <button class="badge ${btnClass}" style="cursor: pointer; border: none; font-family: inherit; font-size: 0.75rem;" onclick="togglePersonaHabilitacion(${p.id})">
+                        <span class="badge ${btnClass}">
                             ${btnText}
-                        </button>
+                        </span>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -423,17 +491,22 @@ document.addEventListener("DOMContentLoaded", () => {
     const groupUnidad = document.getElementById("group-residente-unidad");
     const groupServicio = document.getElementById("group-proveedor-servicio");
 
+    const groupPersonalBarrio = document.getElementById("group-personal-barrio");
+
     selectTipoPersona.addEventListener("change", (e) => {
         const val = e.target.value;
         if (val === "RESIDENTE") {
             groupUnidad.style.display = "flex";
             groupServicio.style.display = "none";
+            if (groupPersonalBarrio) groupPersonalBarrio.style.display = "none";
         } else if (val === "PROVEEDOR") {
             groupUnidad.style.display = "none";
             groupServicio.style.display = "flex";
+            if (groupPersonalBarrio) groupPersonalBarrio.style.display = "flex";
         } else {
             groupUnidad.style.display = "none";
             groupServicio.style.display = "none";
+            if (groupPersonalBarrio) groupPersonalBarrio.style.display = "flex";
         }
     });
 
@@ -459,9 +532,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
             } else {
                 const tipoServicio = document.getElementById("persona-servicio").value.trim();
+                const barrioId = document.getElementById("persona-barrio").value;
                 result = await apiRequest("/api/personal", "POST", {
                     nombre, apellido, dni, email, tipo,
-                    tipoServicio: tipo === "PROVEEDOR" ? tipoServicio : null
+                    tipoServicio: tipo === "PROVEEDOR" ? tipoServicio : null,
+                    barrioId: barrioId ? parseInt(barrioId) : null
                 });
             }
             logSystem(`Persona registrada via Factory: ${result.nombre} ${result.apellido} (Tipo: ${tipo})`, "system");
@@ -469,18 +544,26 @@ document.addEventListener("DOMContentLoaded", () => {
             formPersona.reset();
             groupUnidad.style.display = "flex";
             groupServicio.style.display = "none";
+            if (groupPersonalBarrio) groupPersonalBarrio.style.display = "none";
             await cargarDatosPorRol("ADMINISTRADOR");
         } catch (error) {}
     });
 
     // --- CONTEXT SELECTORS & INITIALIZATION (SIMULATOR) ---
     function inicializarSelectoresContexto() {
+        const globalBarrioId = document.getElementById("global-barrio-select")?.value || "ALL";
+
         // --- RESIDENT PANEL ---
         const activeResSelect = document.getElementById("active-residente-select");
         const formResSelect = document.getElementById("reclamo-residente");
         const autResSelect = document.getElementById("aut-residente");
         
-        const listRes = personas.filter(p => p.tipo === "RESIDENTE");
+        const listRes = personas.filter(p => {
+            if (p.tipo !== "RESIDENTE") return false;
+            if (globalBarrioId === "ALL") return true;
+            const uf = unidades.find(u => u.id === p.unidadFuncionalId);
+            return uf && uf.barrioId == globalBarrioId;
+        });
         
         const prevResVal = activeResSelect.value;
         activeResSelect.innerHTML = listRes.length ? "" : '<option value="" disabled>No hay residentes registrados</option>';
@@ -504,6 +587,39 @@ document.addEventListener("DOMContentLoaded", () => {
                 formResSelect.innerHTML = `<option value="${activeVal}" selected>${activeVal}</option>`;
                 autResSelect.innerHTML = `<option value="${activeVal}" selected>${activeVal}</option>`;
                 cargarReclamosResidente(activeVal);
+                cargarAutorizacionesResidente(activeVal);
+
+                // Populate aut-visitante-select
+                const autVisSelect = document.getElementById("aut-visitante-select");
+                if (autVisSelect) {
+                    autVisSelect.innerHTML = '<option value="">-- Nuevo Visitante --</option>';
+                    personas.filter(p => p.tipo === "VISITANTE").forEach(v => {
+                        const opt = document.createElement("option");
+                        opt.value = v.id;
+                        opt.textContent = `${v.nombre} ${v.apellido} (DNI: ${v.dni})`;
+                        opt.dataset.nombre = v.nombre;
+                        opt.dataset.dni = v.dni;
+                        autVisSelect.appendChild(opt);
+                    });
+
+                    const nameInput = document.getElementById("aut-visitante-nombre");
+                    const dniInput = document.getElementById("aut-visitante-dni");
+                    autVisSelect.onchange = () => {
+                        const selectedVal = autVisSelect.value;
+                        if (selectedVal) {
+                            const opt = autVisSelect.options[autVisSelect.selectedIndex];
+                            nameInput.value = opt.dataset.nombre;
+                            nameInput.readOnly = true;
+                            dniInput.value = opt.dataset.dni;
+                            dniInput.readOnly = true;
+                        } else {
+                            nameInput.value = "";
+                            nameInput.readOnly = false;
+                            dniInput.value = "";
+                            dniInput.readOnly = false;
+                        }
+                    };
+                }
             }
         };
         activeResSelect.onchange = syncResident;
@@ -513,7 +629,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const activeGuardiaSelect = document.getElementById("active-guardia-select");
         const formGuardiaSelect = document.getElementById("checkin-seguridad");
         
-        const listGuardias = personas.filter(p => p.tipo === "SEGURIDAD");
+        const listGuardias = personas.filter(p => {
+            if (p.tipo !== "SEGURIDAD") return false;
+            if (globalBarrioId === "ALL") return true;
+            return p.barrioId == globalBarrioId;
+        });
         const prevGuardiaVal = activeGuardiaSelect.value;
         activeGuardiaSelect.innerHTML = listGuardias.length ? "" : '<option value="" disabled>No hay guardias de seguridad</option>';
         
@@ -538,19 +658,29 @@ document.addEventListener("DOMContentLoaded", () => {
         activeGuardiaSelect.onchange = syncGuardia;
         syncGuardia();
 
-        // --- PROVEEDOR PANEL ---
+        // --- PROVEEDOR PANEL (TAREAS) ---
         const activeProvSelect = document.getElementById("active-proveedor-select");
         const filterProvSelect = document.getElementById("proveedor-filtro");
         
-        const listProvs = personas.filter(p => p.tipo === "PROVEEDOR" || p.tipo === "MANTENIMIENTO");
+        const listProvs = personas.filter(p => {
+            if (p.tipo !== "PROVEEDOR" && p.tipo !== "MANTENIMIENTO" && p.tipo !== "SEGURIDAD") return false;
+            if (globalBarrioId === "ALL") return true;
+            return p.barrioId == globalBarrioId;
+        });
         const prevProvVal = activeProvSelect.value;
         activeProvSelect.innerHTML = listProvs.length ? "" : '<option value="" disabled>No hay operarios registrados</option>';
         
         listProvs.forEach((op, idx) => {
             const opt = document.createElement("option");
             opt.value = op.id;
-            // Distinción clara de roles de mantenimiento
-            const tagRol = op.tipo === "MANTENIMIENTO" ? "Mantenimiento Interno" : `Proveedor Externo: ${op.tipoServicio}`;
+            let tagRol = "";
+            if (op.tipo === "MANTENIMIENTO") {
+                tagRol = "Mantenimiento Interno";
+            } else if (op.tipo === "SEGURIDAD") {
+                tagRol = "Personal de Seguridad";
+            } else {
+                tagRol = `Proveedor Externo: ${op.tipoServicio}`;
+            }
             opt.textContent = `${op.nombre} ${op.apellido} (${tagRol})`;
             if (prevProvVal && prevProvVal == op.id) {
                 opt.selected = true;
@@ -576,13 +706,18 @@ document.addEventListener("DOMContentLoaded", () => {
         
         checkinPersonaSelect.innerHTML = '<option value="" disabled selected>Seleccione la persona que ingresa...</option>';
         
-        // Obtener IDs de personas que ya están adentro del barrio
         const idsAdentro = visitasActivas.map(v => v.visitanteId);
         
         // Grupo Residentes
         const groupRes = document.createElement("optgroup");
         groupRes.label = "Residentes";
-        personas.filter(p => p.tipo === "RESIDENTE" && !idsAdentro.includes(p.id)).forEach(p => {
+        personas.filter(p => {
+            if (p.tipo !== "RESIDENTE") return false;
+            if (idsAdentro.includes(p.id)) return false;
+            if (globalBarrioId === "ALL") return true;
+            const uf = unidades.find(u => u.id === p.unidadFuncionalId);
+            return uf && uf.barrioId == globalBarrioId;
+        }).forEach(p => {
             const opt = document.createElement("option");
             opt.value = p.id;
             opt.dataset.dni = p.dni;
@@ -594,7 +729,12 @@ document.addEventListener("DOMContentLoaded", () => {
         // Grupo Personal y Proveedores (Mantenimiento / Seguridad)
         const groupStaff = document.createElement("optgroup");
         groupStaff.label = "Personal y Proveedores";
-        personas.filter(p => p.tipo !== "RESIDENTE" && p.tipo !== "VISITANTE" && !idsAdentro.includes(p.id)).forEach(p => {
+        personas.filter(p => {
+            if (p.tipo === "RESIDENTE" || p.tipo === "VISITANTE" || p.tipo === "ADMINISTRADOR") return false;
+            if (idsAdentro.includes(p.id)) return false;
+            if (globalBarrioId === "ALL") return true;
+            return p.barrioId == globalBarrioId;
+        }).forEach(p => {
             const opt = document.createElement("option");
             opt.value = p.id;
             opt.dataset.dni = p.dni;
@@ -607,7 +747,25 @@ document.addEventListener("DOMContentLoaded", () => {
         // Grupo Visitantes Externos
         const groupVis = document.createElement("optgroup");
         groupVis.label = "Visitantes Externos Autorizados";
-        personas.filter(p => p.tipo === "VISITANTE" && !idsAdentro.includes(p.id)).forEach(p => {
+        personas.filter(p => {
+            if (p.tipo !== "VISITANTE") return false;
+            if (idsAdentro.includes(p.id)) return false;
+
+            const ahora = new Date();
+            return autorizaciones.some(a => {
+                if (a.visitanteId !== p.id) return false;
+                if (a.utilizada) return false;
+                const desde = new Date(a.fechaDesde);
+                const hasta = new Date(a.fechaHasta);
+                if (ahora < desde || ahora > hasta) return false;
+
+                if (globalBarrioId === "ALL") return true;
+                const res = personas.find(pers => pers.id === a.residenteId);
+                if (!res) return false;
+                const uf = unidades.find(u => u.id === res.unidadFuncionalId);
+                return uf && uf.barrioId == globalBarrioId;
+            });
+        }).forEach(p => {
             const opt = document.createElement("option");
             opt.value = p.id;
             opt.dataset.dni = p.dni;
@@ -624,6 +782,47 @@ document.addEventListener("DOMContentLoaded", () => {
         };
     }
 
+    // --- AUTORIZACIONES RESIDENTE ---
+    async function cargarAutorizacionesResidente(residenteId) {
+        try {
+            const list = await apiRequest(`/api/autorizaciones?residenteId=${residenteId}`) || [];
+            renderTablaAutorizacionesResidente(list);
+        } catch (e) {
+            console.log("Error cargando autorizaciones del residente");
+        }
+    }
+
+    function renderTablaAutorizacionesResidente(list) {
+        const tbody = document.querySelector("#tabla-autorizaciones-residente tbody");
+        if (!tbody) return;
+        tbody.innerHTML = "";
+        if (!list || list.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-muted" style="text-align: center;">No hay autorizaciones registradas.</td></tr>`;
+            return;
+        }
+        list.forEach(a => {
+            const tr = document.createElement("tr");
+            const fechaDesdeStr = new Date(a.fechaDesde).toLocaleString();
+            const fechaHastaStr = new Date(a.fechaHasta).toLocaleString();
+            const estadoLabel = a.utilizada ? '<span class="badge badge-muted">Utilizada</span>' : '<span class="badge badge-success">Vigente</span>';
+            const actionHtml = a.utilizada
+                ? '<span class="text-muted" style="font-size: 0.75rem;">No revocable</span>'
+                : `<button class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="revocarAutorizacion(${a.id})">Revocar</button>`;
+
+            tr.innerHTML = `
+                <td>${a.visitanteNombre}</td>
+                <td>${a.visitanteDni}</td>
+                <td>${fechaDesdeStr}</td>
+                <td>${fechaHastaStr}</td>
+                <td>${estadoLabel}</td>
+                <td>
+                    ${actionHtml}
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
     // --- RECLAMOS RESIDENTE ---
     async function cargarReclamosResidente(residenteId) {
         try {
@@ -638,7 +837,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const tbody = document.querySelector("#tabla-reclamos-residente tbody");
         tbody.innerHTML = "";
         if (!myReclamos || myReclamos.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-muted" style="text-align: center;">No tienes reclamos registrados.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="text-muted" style="text-align: center;">No tienes reclamos registrados.</td></tr>`;
             return;
         }
         myReclamos.forEach(r => {
@@ -651,12 +850,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 CANCELADO: "badge-danger"
             }[r.estado] || "badge-muted";
 
+            let actionHtml = "-";
+            if (r.estado === "PENDIENTE" || r.estado === "EN_PROCESO") {
+                actionHtml = `<button class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="cancelarReclamo(${r.id})">Cancelar</button>`;
+            }
+
             tr.innerHTML = `
                 <td>#${r.id}</td>
-                <td>${r.descripcion}</td>
+                <td><strong>${r.tipoReclamo}</strong><br><small>${r.descripcion}</small></td>
                 <td><span class="badge">${r.prioridad}</span></td>
                 <td><span class="badge ${badgeClass}">${r.estado}</span></td>
                 <td>${r.responsableNombreCompleto || '<span class="text-muted">Sin asignar</span>'}</td>
+                <td>${actionHtml}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -674,8 +879,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const tbody = document.querySelector("#tabla-reclamos-admin tbody");
         tbody.innerHTML = "";
         
-        const operarios = personas.filter(p => p.tipo === "PROVEEDOR" || p.tipo === "MANTENIMIENTO");
-        
         reclamos.forEach(r => {
             const tr = document.createElement("tr");
             
@@ -689,27 +892,64 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const res = personas.find(p => p.id === r.residenteId);
             const resName = res ? `${res.nombre} ${res.apellido}` : `Residente #${r.residenteId}`;
+            const barrioName = r.barrioNombre || "s/d";
+
+            // Find claimant resident unit & barrio
+            const claimantUf = res ? unidades.find(u => u.id === res.unidadFuncionalId) : null;
+            const claimantBarrioId = claimantUf ? claimantUf.barrioId : null;
+
+            const operariosValidos = personas.filter(p => {
+                // Must be enabled/available
+                if (!p.habilitado) return false;
+                
+                // Must be a worker
+                if (p.tipo !== "MANTENIMIENTO" && p.tipo !== "PROVEEDOR" && p.tipo !== "SEGURIDAD") return false;
+                
+                // If the worker has a barrio assigned, must match resident's barrio
+                if (p.barrioId && claimantBarrioId && p.barrioId != claimantBarrioId) return false;
+
+                // Filter by claim type compatibility
+                if (r.tipoReclamo === "MANTENIMIENTO") {
+                    return p.tipo === "MANTENIMIENTO";
+                }
+                if (r.tipoReclamo === "SUMINISTROS") {
+                    return p.tipo === "PROVEEDOR";
+                }
+                if (r.tipoReclamo === "SEGURIDAD") {
+                    return p.tipo === "SEGURIDAD";
+                }
+                return true;
+            });
 
             tr.innerHTML = `
                 <td>#${r.id}</td>
                 <td>${resName}</td>
+                <td>${barrioName}</td>
                 <td><strong>${r.tipoReclamo}</strong><br><small>${r.descripcion}</small></td>
                 <td><span class="badge">${r.prioridad}</span></td>
                 <td><span class="badge ${badgeClass}">${r.estado}</span></td>
-                <td>${r.responsableNombreCompleto ? r.responsableNombreCompleto : '<span class="text-muted">Sin asignar</span>'}</td>
                 <td>
                     ${r.estado === 'PENDIENTE' ? `
                         <div style="display: flex; gap: 0.5rem; align-items: center;">
                             <select class="form-control select-responsable-inline" data-id="${r.id}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; min-width: 170px; background: rgba(15, 23, 42, 0.8);">
                                 <option value="" disabled selected>Asignar a...</option>
-                                ${operarios.map(op => {
-                                    const descRol = op.tipo === "MANTENIMIENTO" ? "Interno" : `Ext: ${op.tipoServicio}`;
+                                ${operariosValidos.map(op => {
+                                    let descRol = "";
+                                    if (op.tipo === "MANTENIMIENTO") {
+                                        descRol = "Personal de Mantenimiento";
+                                    } else if (op.tipo === "SEGURIDAD") {
+                                        descRol = "Personal de Seguridad";
+                                    } else if (op.tipo === "PROVEEDOR") {
+                                        descRol = "Proveedor: " + (op.tipoServicio || "General");
+                                    } else {
+                                        descRol = op.tipo;
+                                    }
                                     return `<option value="${op.id}">${op.nombre} ${op.apellido} (${descRol})</option>`;
                                 }).join('')}
                             </select>
                             <button class="btn btn-primary btn-sm btn-asignar-inline" data-id="${r.id}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Confirmar</button>
                         </div>
-                    ` : ''}
+                    ` : (r.responsableNombreCompleto ? r.responsableNombreCompleto : '<span class="text-muted">Sin asignar</span>')}
                 </td>
             `;
             tbody.appendChild(tr);
@@ -755,11 +995,18 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderTablaVisitasActivas() {
         const tbody = document.querySelector("#tabla-visitas-activas tbody");
         tbody.innerHTML = "";
-        if (visitasActivas.length === 0) {
+        
+        const globalBarrioId = document.getElementById("global-barrio-select")?.value || "ALL";
+        const filteredVisitas = visitasActivas.filter(v => {
+            if (globalBarrioId === "ALL") return true;
+            return v.barrioId && v.barrioId.toString() === globalBarrioId.toString();
+        });
+
+        if (filteredVisitas.length === 0) {
             tbody.innerHTML = `<tr><td colspan="5" class="text-muted" style="text-align: center;">No hay ingresos/visitas activas dentro del complejo.</td></tr>`;
             return;
         }
-        visitasActivas.forEach(v => {
+        filteredVisitas.forEach(v => {
             const tr = document.createElement("tr");
             
             // Encontrar nombre de persona real ingresada
@@ -925,6 +1172,8 @@ document.addEventListener("DOMContentLoaded", () => {
             logSystem(`Autorización #${res.id} creada para ${visitanteNombre} (DNI: ${visitanteDni})`, "system");
             showToast(`Autorización para "${visitanteNombre}" generada con éxito por 24 hs.`, "success");
             document.getElementById("form-autorizar").reset();
+            document.getElementById("aut-visitante-nombre").readOnly = false;
+            document.getElementById("aut-visitante-dni").readOnly = false;
             
             // Recargar datos y re-poblar los selectores del guardia (para que aparezca en vivo)
             await cargarDatosPorRol("RESIDENTE");
@@ -933,6 +1182,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("form-checkin").addEventListener("submit", async (e) => {
         e.preventDefault();
+
+        const globalBarrioId = document.getElementById("global-barrio-select")?.value || "ALL";
+        if (globalBarrioId === "ALL") {
+            showToast("Por favor, seleccione un barrio activo específico en la cabecera antes de registrar un ingreso.", "warning");
+            return;
+        }
+
         const seguridadId = document.getElementById("checkin-seguridad").value;
         const checkinPersonaId = document.getElementById("checkin-persona-select").value;
         const visitanteDni = document.getElementById("checkin-visitante-dni").value.trim();
@@ -958,6 +1214,39 @@ document.addEventListener("DOMContentLoaded", () => {
             await cargarDatosPorRol("GUARDIA");
         } catch (err) {}
     });
+
+    window.cancelarReclamo = async (id) => {
+        if (!confirm(`¿Está seguro de que desea cancelar el reclamo #${id}?`)) return;
+        try {
+            await apiRequest(`/api/reclamos/${id}/estado`, "PUT", {
+                nuevoEstado: "CANCELADO",
+                observacion: "Cancelado por el residente"
+            });
+            showToast(`Reclamo #${id} cancelado con éxito.`, "success");
+            const activeResidenteId = document.getElementById("active-residente-select").value;
+            if (activeResidenteId) {
+                await cargarReclamosResidente(activeResidenteId);
+            }
+        } catch (error) {
+            console.error("Error al cancelar reclamo:", error);
+            showToast("Error al cancelar el reclamo.", "danger");
+        }
+    };
+
+    window.revocarAutorizacion = async (id) => {
+        if (!confirm("¿Está seguro de que desea revocar esta autorización?")) return;
+        try {
+            await apiRequest(`/api/autorizaciones/${id}`, "DELETE");
+            showToast("Autorización revocada con éxito.", "success");
+            const activeResidenteId = document.getElementById("active-residente-select").value;
+            if (activeResidenteId) {
+                await cargarAutorizacionesResidente(activeResidenteId);
+            }
+        } catch (err) {
+            console.error("Error al revocar autorización:", err);
+            showToast("Error al revocar la autorización.", "danger");
+        }
+    };
 
     // --- HABILITACIÓN/DESHABILITACIÓN INTERACTIVA ---
     window.togglePersonaHabilitacion = async (id) => {

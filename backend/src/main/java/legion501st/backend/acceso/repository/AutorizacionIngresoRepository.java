@@ -16,4 +16,8 @@ public interface AutorizacionIngresoRepository extends JpaRepository<Autorizacio
             LocalDateTime fechaDesde,
             LocalDateTime fechaHasta
     );
+
+    java.util.List<AutorizacionIngreso> findByVisitanteIdAndUtilizadaFalse(Long visitanteId);
+
+    java.util.List<AutorizacionIngreso> findByResidenteAutorizaId(Long residenteId);
 }
