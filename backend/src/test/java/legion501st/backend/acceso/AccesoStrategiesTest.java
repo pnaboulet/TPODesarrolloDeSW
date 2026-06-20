@@ -42,12 +42,12 @@ class AccesoStrategiesTest {
 
         // Caso residente deshabilitado
         residente.setHabilitado(false);
-        assertFalse(accesoResidente.puedeIngresar(residente, null));
+        assertThrows(IllegalArgumentException.class, () -> accesoResidente.puedeIngresar(residente, null));
 
         // Caso residente habilitado pero unidad funcional deshabilitada
         residente.setHabilitado(true);
         uf.setHabilitada(false);
-        assertFalse(accesoResidente.puedeIngresar(residente, null));
+        assertThrows(IllegalArgumentException.class, () -> accesoResidente.puedeIngresar(residente, null));
     }
 
     @Test
@@ -56,7 +56,7 @@ class AccesoStrategiesTest {
         visitante.setHabilitado(true);
 
         // Sin autorizacion
-        assertFalse(accesoVisitante.puedeIngresar(visitante, null));
+        assertThrows(IllegalArgumentException.class, () -> accesoVisitante.puedeIngresar(visitante, null));
 
         // Con autorizacion vigente
         AutorizacionIngreso autorizacion = new AutorizacionIngreso();
@@ -68,7 +68,7 @@ class AccesoStrategiesTest {
 
         // Visitante deshabilitado
         visitante.setHabilitado(false);
-        assertFalse(accesoVisitante.puedeIngresar(visitante, autorizacion));
+        assertThrows(IllegalArgumentException.class, () -> accesoVisitante.puedeIngresar(visitante, autorizacion));
     }
 
     @Test
@@ -76,9 +76,9 @@ class AccesoStrategiesTest {
         Proveedor proveedor = new Proveedor();
         proveedor.setHabilitado(true);
 
-        // Si está deshabilitado, debe dar false siempre
+        // Si está deshabilitado, debe dar excepción
         proveedor.setHabilitado(false);
-        assertFalse(accesoProveedor.puedeIngresar(proveedor, null));
+        assertThrows(IllegalArgumentException.class, () -> accesoProveedor.puedeIngresar(proveedor, null));
     }
 
     @Test
@@ -86,9 +86,9 @@ class AccesoStrategiesTest {
         PersonalMantenimiento empleado = new PersonalMantenimiento();
         empleado.setHabilitado(true);
 
-        // Si está deshabilitado, debe dar false siempre
+        // Si está deshabilitado, debe dar excepción
         empleado.setHabilitado(false);
-        assertFalse(accesoPersonalMantenimiento.puedeIngresar(empleado, null));
+        assertThrows(IllegalArgumentException.class, () -> accesoPersonalMantenimiento.puedeIngresar(empleado, null));
     }
 
     @Test
@@ -99,7 +99,7 @@ class AccesoStrategiesTest {
         assertTrue(accesoPersonalSeguridad.puedeIngresar(guardia, null));
 
         guardia.setHabilitado(false);
-        assertFalse(accesoPersonalSeguridad.puedeIngresar(guardia, null));
+        assertThrows(IllegalArgumentException.class, () -> accesoPersonalSeguridad.puedeIngresar(guardia, null));
     }
 
     @Test
@@ -110,6 +110,6 @@ class AccesoStrategiesTest {
         assertTrue(accesoAdministrador.puedeIngresar(admin, null));
 
         admin.setHabilitado(false);
-        assertFalse(accesoAdministrador.puedeIngresar(admin, null));
+        assertThrows(IllegalArgumentException.class, () -> accesoAdministrador.puedeIngresar(admin, null));
     }
 }

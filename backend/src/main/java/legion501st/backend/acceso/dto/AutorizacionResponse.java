@@ -9,6 +9,8 @@ public class AutorizacionResponse {
     private Long id;
     private Long residenteId;
     private Long visitanteId;
+    private String visitanteNombre;
+    private String visitanteDni;
     private LocalDateTime fechaDesde;
     private LocalDateTime fechaHasta;
     private boolean utilizada;
@@ -16,10 +18,12 @@ public class AutorizacionResponse {
     public AutorizacionResponse() {
     }
 
-    public AutorizacionResponse(Long id, Long residenteId, Long visitanteId, LocalDateTime fechaDesde, LocalDateTime fechaHasta, boolean utilizada) {
+    public AutorizacionResponse(Long id, Long residenteId, Long visitanteId, String visitanteNombre, String visitanteDni, LocalDateTime fechaDesde, LocalDateTime fechaHasta, boolean utilizada) {
         this.id = id;
         this.residenteId = residenteId;
         this.visitanteId = visitanteId;
+        this.visitanteNombre = visitanteNombre;
+        this.visitanteDni = visitanteDni;
         this.fechaDesde = fechaDesde;
         this.fechaHasta = fechaHasta;
         this.utilizada = utilizada;
@@ -35,10 +39,19 @@ public class AutorizacionResponse {
                 ? autorizacion.getVisitante().getId()
                 : null;
 
+        String visitanteNombre = null;
+        String visitanteDni = null;
+        if (autorizacion.getVisitante() != null) {
+            visitanteNombre = autorizacion.getVisitante().getNombre() + " " + autorizacion.getVisitante().getApellido();
+            visitanteDni = autorizacion.getVisitante().getDni();
+        }
+
         return new AutorizacionResponse(
                 autorizacion.getId(),
                 residenteId,
                 visitanteId,
+                visitanteNombre,
+                visitanteDni,
                 autorizacion.getFechaDesde(),
                 autorizacion.getFechaHasta(),
                 autorizacion.isUtilizada()
@@ -67,6 +80,22 @@ public class AutorizacionResponse {
 
     public void setVisitanteId(Long visitanteId) {
         this.visitanteId = visitanteId;
+    }
+
+    public String getVisitanteNombre() {
+        return visitanteNombre;
+    }
+
+    public void setVisitanteNombre(String visitanteNombre) {
+        this.visitanteNombre = visitanteNombre;
+    }
+
+    public String getVisitanteDni() {
+        return visitanteDni;
+    }
+
+    public void setVisitanteDni(String visitanteDni) {
+        this.visitanteDni = visitanteDni;
     }
 
     public LocalDateTime getFechaDesde() {

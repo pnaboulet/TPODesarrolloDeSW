@@ -56,11 +56,11 @@ public class AutorizacionIngreso {
     public boolean estaVigente() {
         LocalDateTime ahora = LocalDateTime.now();
 
-        // esta vigente si no se usó y la fecha actual cae dentro del rango permitido
+        // esta vigente si no se usó y la fecha actual cae dentro del rango permitido (con 24 hs de tolerancia para inicio)
         return !utilizada
                 && fechaDesde != null
                 && fechaHasta != null
-                && !ahora.isBefore(fechaDesde)
+                && !ahora.isBefore(fechaDesde.minusHours(24))
                 && !ahora.isAfter(fechaHasta);
     }
 

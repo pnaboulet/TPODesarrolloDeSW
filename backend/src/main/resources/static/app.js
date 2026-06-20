@@ -94,6 +94,16 @@ document.addEventListener("DOMContentLoaded", () => {
         return /^[^\s@]+@[^\s@]+\.com$/i.test(email);
     }
 
+    function establecerFechaDesdePorDefecto() {
+        const inputDesde = document.getElementById("aut-desde");
+        if (inputDesde) {
+            const now = new Date();
+            const offset = now.getTimezoneOffset();
+            const localNow = new Date(now.getTime() - (offset * 60 * 1000));
+            inputDesde.value = localNow.toISOString().slice(0, 16);
+        }
+    }
+
     function validarDniAntesDeEnviar(dni, contexto = "DNI") {
         if (!esDniValido(dni)) {
             showToast(`${contexto} debe tener exactamente 8 números`, "error");
@@ -588,6 +598,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 autResSelect.innerHTML = `<option value="${activeVal}" selected>${activeVal}</option>`;
                 cargarReclamosResidente(activeVal);
                 cargarAutorizacionesResidente(activeVal);
+                establecerFechaDesdePorDefecto();
 
                 // Populate aut-visitante-select
                 const autVisSelect = document.getElementById("aut-visitante-select");
@@ -704,75 +715,87 @@ document.addEventListener("DOMContentLoaded", () => {
         const checkinPersonaSelect = document.getElementById("checkin-persona-select");
         const dniInput = document.getElementById("checkin-visitante-dni");
         
-        checkinPersonaSelect.innerHTML = '<option value="" disabled selected>Seleccione la persona que ingresa...</option>';
-        
-        const idsAdentro = visitasActivas.map(v => v.visitanteId);
-        
-        // Grupo Residentes
-        const groupRes = document.createElement("optgroup");
-        groupRes.label = "Residentes";
-        personas.filter(p => {
-            if (p.tipo !== "RESIDENTE") return false;
-            if (idsAdentro.includes(p.id)) return false;
-            if (globalBarrioId === "ALL") return true;
-            const uf = unidades.find(u => u.id === p.unidadFuncionalId);
-            return uf && uf.barrioId == globalBarrioId;
-        }).forEach(p => {
-            const opt = document.createElement("option");
-            opt.value = p.id;
-            opt.dataset.dni = p.dni;
-            opt.textContent = `${p.nombre} ${p.apellido} (DNI: ${p.dni})`;
-            groupRes.appendChild(opt);
-        });
-        checkinPersonaSelect.appendChild(groupRes);
-
-        // Grupo Personal y Proveedores (Mantenimiento / Seguridad)
-        const groupStaff = document.createElement("optgroup");
-        groupStaff.label = "Personal y Proveedores";
-        personas.filter(p => {
-            if (p.tipo === "RESIDENTE" || p.tipo === "VISITANTE" || p.tipo === "ADMINISTRADOR") return false;
-            if (idsAdentro.includes(p.id)) return false;
-            if (globalBarrioId === "ALL") return true;
-            return p.barrioId == globalBarrioId;
-        }).forEach(p => {
-            const opt = document.createElement("option");
-            opt.value = p.id;
-            opt.dataset.dni = p.dni;
-            const rolLabel = p.tipo === "MANTENIMIENTO" ? "Mantenimiento Interno" : p.tipo;
-            opt.textContent = `${p.nombre} ${p.apellido} (Rol: ${rolLabel} - DNI: ${p.dni})`;
-            groupStaff.appendChild(opt);
-        });
-        checkinPersonaSelect.appendChild(groupStaff);
-
-        // Grupo Visitantes Externos
-        const groupVis = document.createElement("optgroup");
-        groupVis.label = "Visitantes Externos Autorizados";
-        personas.filter(p => {
-            if (p.tipo !== "VISITANTE") return false;
-            if (idsAdentro.includes(p.id)) return false;
-
-            const ahora = new Date();
-            return autorizaciones.some(a => {
-                if (a.visitanteId !== p.id) return false;
-                if (a.utilizada) return false;
-                const desde = new Date(a.fechaDesde);
-                const hasta = new Date(a.fechaHasta);
-                if (ahora < desde || ahora > hasta) return false;
-
-                if (globalBarrioId === "ALL") return true;
-                const res = personas.find(pers => pers.id === a.residenteId);
-                if (!res) return false;
-                const uf = unidades.find(u => u.id === res.unidadFuncionalId);
+        if (globalBarrioId === "ALL") {
+            checkinPersonaSelect.innerHTML = '<option value="" disabled selected>Seleccione un barrio activo en la cabecera...</option>';
+            checkinPersonaSelect.disabled = true;
+            if (dniInput) dniInput.value = "";
+        } else {
+            checkinPersonaSelect.disabled = false;
+            checkinPersonaSelect.innerHTML = '<option value="" disabled selected>Seleccione la persona que ingresa...</option>';
+            
+            const idsAdentro = visitasActivas.map(v => v.visitanteId);
+            
+            // Grupo Residentes
+            const groupRes = document.createElement("optgroup");
+            groupRes.label = "Residentes";
+            personas.filter(p => {
+                if (p.tipo !== "RESIDENTE") return false;
+                if (idsAdentro.includes(p.id)) return false;
+                const uf = unidades.find(u => u.id === p.unidadFuncionalId);
                 return uf && uf.barrioId == globalBarrioId;
+            }).forEach(p => {
+                const opt = document.createElement("option");
+                opt.value = p.id;
+                opt.dataset.dni = p.dni;
+                opt.textContent = `${p.nombre} ${p.apellido} (DNI: ${p.dni})`;
+                groupRes.appendChild(opt);
             });
-        }).forEach(p => {
-            const opt = document.createElement("option");
-            opt.value = p.id;
-            opt.dataset.dni = p.dni;
-            opt.textContent = `${p.nombre} ${p.apellido} (DNI: ${p.dni})`;
-            groupVis.appendChild(opt);
-        });
-        checkinPersonaSelect.appendChild(groupVis);
+            if (groupRes.children.length > 0) {
+                checkinPersonaSelect.appendChild(groupRes);
+            }
+
+            // Grupo Personal y Proveedores (Mantenimiento / Seguridad)
+            const groupStaff = document.createElement("optgroup");
+            groupStaff.label = "Personal y Proveedores";
+            personas.filter(p => {
+                if (p.tipo === "RESIDENTE" || p.tipo === "VISITANTE" || p.tipo === "ADMINISTRADOR") return false;
+                if (idsAdentro.includes(p.id)) return false;
+                return p.barrioId == globalBarrioId;
+            }).forEach(p => {
+                const opt = document.createElement("option");
+                opt.value = p.id;
+                opt.dataset.dni = p.dni;
+                const rolLabel = p.tipo === "MANTENIMIENTO" ? "Mantenimiento Interno" : p.tipo;
+                opt.textContent = `${p.nombre} ${p.apellido} (Rol: ${rolLabel} - DNI: ${p.dni})`;
+                groupStaff.appendChild(opt);
+            });
+            if (groupStaff.children.length > 0) {
+                checkinPersonaSelect.appendChild(groupStaff);
+            }
+
+            // Grupo Visitantes Externos
+            const groupVis = document.createElement("optgroup");
+            groupVis.label = "Visitantes Externos Autorizados";
+            personas.filter(p => {
+                if (p.tipo !== "VISITANTE") return false;
+                if (idsAdentro.includes(p.id)) return false;
+
+                const ahora = new Date();
+                return autorizaciones.some(a => {
+                    if (a.visitanteId !== p.id) return false;
+                    if (a.utilizada) return false;
+                    const desde = new Date(a.fechaDesde);
+                    const hasta = new Date(a.fechaHasta);
+                    // Tolerancia de 24 horas para inicio (evita problemas de huso horario y adelantos)
+                    const desdeConTolerancia = new Date(desde.getTime() - 24 * 60 * 60 * 1000);
+                    if (ahora < desdeConTolerancia || ahora > hasta) return false;
+
+                    const res = personas.find(pers => pers.id === a.residenteId);
+                    if (!res) return false;
+                    const uf = unidades.find(u => u.id === res.unidadFuncionalId);
+                    return uf && uf.barrioId == globalBarrioId;
+                });
+            }).forEach(p => {
+                const opt = document.createElement("option");
+                opt.value = p.id;
+                opt.dataset.dni = p.dni;
+                opt.textContent = `${p.nombre} ${p.apellido} (DNI: ${p.dni})`;
+                groupVis.appendChild(opt);
+            });
+            if (groupVis.children.length > 0) {
+                checkinPersonaSelect.appendChild(groupVis);
+            }
+        }
 
         checkinPersonaSelect.onchange = () => {
             const selectedOpt = checkinPersonaSelect.options[checkinPersonaSelect.selectedIndex];
@@ -1172,6 +1195,7 @@ document.addEventListener("DOMContentLoaded", () => {
             logSystem(`Autorización #${res.id} creada para ${visitanteNombre} (DNI: ${visitanteDni})`, "system");
             showToast(`Autorización para "${visitanteNombre}" generada con éxito por 24 hs.`, "success");
             document.getElementById("form-autorizar").reset();
+            establecerFechaDesdePorDefecto();
             document.getElementById("aut-visitante-nombre").readOnly = false;
             document.getElementById("aut-visitante-dni").readOnly = false;
             

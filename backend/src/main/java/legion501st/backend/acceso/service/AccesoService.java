@@ -121,8 +121,7 @@ public class AccesoService {
         if (visitante instanceof Visitante) {
             List<AutorizacionIngreso> auts = autorizacionRepository.findByVisitanteIdAndUtilizadaFalse(visitanteId);
             autorizacion = auts.stream()
-                    .filter(a -> a.getFechaDesde() != null && a.getFechaHasta() != null 
-                              && !ahora.isBefore(a.getFechaDesde()) && !ahora.isAfter(a.getFechaHasta()))
+                    .filter(a -> a.estaVigente())
                     .filter(a -> {
                         if (a.getResidenteAutoriza() == null || a.getResidenteAutoriza().getUnidadFuncional() == null 
                                 || a.getResidenteAutoriza().getUnidadFuncional().getBarrio() == null) {
@@ -224,7 +223,7 @@ public class AccesoService {
         if (fechaDesde == null || fechaHasta == null || !fechaHasta.isAfter(fechaDesde)) {
             throw new IllegalArgumentException("La fecha de fin debe ser posterior a la fecha de inicio");
         }
-        if (fechaDesde.isBefore(LocalDateTime.now().minusMinutes(5))) {
+        if (fechaDesde.isBefore(LocalDateTime.now().minusHours(24))) {
             throw new IllegalArgumentException("No se puede autorizar un ingreso con fecha o rango de horario del pasado");
         }
     }
