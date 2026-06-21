@@ -23,9 +23,20 @@ Patrones GRASP aplicados:
     Low Coupling
     High Cohesion
 Distribución de tareas:
-    Pablo Naboulet:
-
     Valentín Maraulo:
+        - Diseño de la jerarquía y persistencia de Personas.
+        - Implementación del módulo de Control de Accesos (Patrón Strategy).
+        - Configuración de base de datos y dockerización del entorno de desarrollo.
 
     Joaquin Marolda:
-        
+        - Desarrollo del módulo de Reclamos y Tareas de Mantenimiento (Patrón State).
+        - Implementación del patrón Facade para unificar la capa de servicios.
+        - Desarrollo de endpoints de API e integración de controladores.
+
+    Pablo Naboulet:
+        - Desarrollo del sistema de Notificaciones asíncronas (Patrón Observer).
+        - Implementación de la creación de roles mediante fábricas (Patrón Factory).
+        - Diseño de validaciones de negocio e inicialización de datos.
+
+    Colaboración general (QA):
+        - Todos los integrantes participaron de manera flexible y colaborativa en el control de calidad (QA), pruebas funcionales y testing del sistema.
